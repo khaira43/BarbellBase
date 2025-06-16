@@ -7,9 +7,46 @@
 
 import SwiftUI
 
+@MainActor
+final class SignInEmailViewModel: ObservableObject {
+
+    @Published var email = ""
+    @Published var password = ""
+
+    func signUp() async throws {
+        guard !email.isEmpty, !password.isEmpty else {
+            print("No email or password is found.")
+            return
+        }
+
+        try await AuthenticationManager.shared.createUser(
+            email: email,
+            password: password
+        )
+    }
+
+    func signIn() async throws {
+        guard !email.isEmpty, !password.isEmpty else {
+            print("No email or password is found.")
+            return
+        }
+
+        try await AuthenticationManager.shared.signInUser(
+            email: email,
+            password: password
+        )
+    }
+
+}
+
 struct LoginView: View {
-    @State private var email = ""
-    @State private var password = ""
+    @StateObject private var viewModel = SignInEmailViewModel()
+    @State private var isSignedIn = false
+    @State private var signInErrorMessage: String?
+    @State private var showingResetSheet = false
+    @State private var resetEmail = ""
+    @State private var resetErrorMessage: String?
+    @State private var resetSuccessMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -29,7 +66,7 @@ struct LoginView: View {
                         .padding(.bottom, 30)
 
                     // Email Field
-                    TextField("Email", text: $email)
+                    TextField("Email", text: $viewModel.email)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                         .padding()
@@ -37,13 +74,25 @@ struct LoginView: View {
                         .cornerRadius(10)
 
                     // Password Field
-                    SecureField("Password", text: $password)
+                    SecureField("Password", text: $viewModel.password)
                         .padding()
                         .background(Color(.secondarySystemBackground))
                         .cornerRadius(10)
 
                     // Sign In Button
-                    Button(action: signIn) {
+                    Button {
+                        Task {
+                            do {
+                                try await viewModel.signIn()
+                                signInErrorMessage = nil
+                                isSignedIn = true
+                                return
+                            } catch {
+                                signInErrorMessage =
+                                    "Invalid email or password. Please try again."
+                            }
+                        }
+                    } label: {
                         Text("Sign In")
                             .fontWeight(.semibold)
                             .frame(maxWidth: .infinity)
@@ -53,11 +102,35 @@ struct LoginView: View {
                             .cornerRadius(10)
                     }
 
+                    if let errorMessage = signInErrorMessage {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                            .font(.footnote)
+                            .multilineTextAlignment(.center)
+                            .padding(.top, -10)
+                    }
+
                     // Reset Password Link
-                    NavigationLink (destination: ResetPassword()) {
+                    Button {
+                        showingResetSheet = true
+                    } label: {
                         Text("Trouble signing in?")
                             .foregroundColor(.yellow)
                             .underline(true, color: .yellow)
+                    }
+                    .sheet(isPresented: $showingResetSheet) {
+                        ResetPassword(
+                            resetEmail: $resetEmail,
+                            resetErrorMessage: $resetErrorMessage,
+                            resetSuccessMessage: $resetSuccessMessage
+                        )
+                        .presentationDetents([.fraction(0.35)]) // 👈 moved here
+                            .presentationDragIndicator(.visible)
+                            .onDisappear {
+                                resetEmail = ""
+                                resetErrorMessage = nil
+                                resetSuccessMessage = nil
+                            }
                     }
                     
 
@@ -67,11 +140,18 @@ struct LoginView: View {
                     HStack {
                         Text("Don't have an account?")
                             .foregroundColor(.yellow)
-                        NavigationLink(destination: ResetPassword()) {
+                        NavigationLink(destination: WorkoutView()) {
                             Text("Sign Up")
                                 .foregroundColor(.yellow)
                                 .underline(true, color: .yellow)
                         }
+                    }
+
+                    NavigationLink(
+                        destination: WorkoutView(),
+                        isActive: $isSignedIn
+                    ) {
+                        EmptyView()
                     }
                 }
                 .padding()
@@ -80,10 +160,6 @@ struct LoginView: View {
         }
     }
 
-    func signIn() {
-        // Insert sign-in logic here (e.g., Firebase Auth)
-        print("Signing in with \(email) / \(password)")
-    }
 }
 
 extension Color {
