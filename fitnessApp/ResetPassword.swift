@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct ResetPassword: View {
-    @StateObject private var viewModel = SettingsViewModel()
     @Binding var resetEmail: String
     @Binding var resetErrorMessage: String?
     @Binding var resetSuccessMessage: String?

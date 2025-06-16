@@ -47,6 +47,12 @@ struct LoginView: View {
     @State private var resetEmail = ""
     @State private var resetErrorMessage: String?
     @State private var resetSuccessMessage: String?
+    @State private var showingSignUpSheet = false
+    @State private var signUpEmail = ""
+    @State private var signUpPassword = ""
+    @State private var signUpConfirmPassword = ""
+    @State private var signUpErrorMessage: String?
+    @State private var signUpSuccessMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -124,15 +130,14 @@ struct LoginView: View {
                             resetErrorMessage: $resetErrorMessage,
                             resetSuccessMessage: $resetSuccessMessage
                         )
-                        .presentationDetents([.fraction(0.35)]) // 👈 moved here
-                            .presentationDragIndicator(.visible)
-                            .onDisappear {
-                                resetEmail = ""
-                                resetErrorMessage = nil
-                                resetSuccessMessage = nil
-                            }
+                        .presentationDetents([.fraction(0.35)])  // 👈 moved here
+                        .presentationDragIndicator(.visible)
+                        .onDisappear {
+                            resetEmail = ""
+                            resetErrorMessage = nil
+                            resetSuccessMessage = nil
+                        }
                     }
-                    
 
                     Spacer()
 
@@ -140,11 +145,32 @@ struct LoginView: View {
                     HStack {
                         Text("Don't have an account?")
                             .foregroundColor(.yellow)
-                        NavigationLink(destination: WorkoutView()) {
+                        Button {
+                            showingSignUpSheet = true
+                        } label: {
                             Text("Sign Up")
                                 .foregroundColor(.yellow)
                                 .underline(true, color: .yellow)
                         }
+                        .sheet(isPresented: $showingSignUpSheet) {
+                            SignUpView(
+                                email: $signUpEmail,
+                                password: $signUpPassword,
+                                confirmPassword: $signUpConfirmPassword,
+                                errorMessage: $signUpErrorMessage,
+                                successMessage: $signUpSuccessMessage
+                            )
+                            .presentationDetents([.fraction(0.5)])  // 👈 moved here
+                            .presentationDragIndicator(.visible)
+                            .onDisappear {
+                                signUpEmail = ""
+                                signUpPassword = ""
+                                signUpConfirmPassword = ""
+                                signUpErrorMessage = nil
+                                signUpSuccessMessage = nil
+                            }
+                        }
+
                     }
 
                     NavigationLink(
