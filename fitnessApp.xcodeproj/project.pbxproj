@@ -7,7 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F89AC0052E29467A0017FC00 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = F89AC0042E29467A0017FC00 /* FirebaseFirestore */; };
 		F8B318522DE75BE900E9FE47 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = F8B318512DE75BE900E9FE47 /* FirebaseAnalytics */; };
+		F8B82E0C2E0B138800CA284E /* AddExerciseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8B82E0B2E0B138800CA284E /* AddExerciseView.swift */; };
 		F8C2609E2DF74EC900CEAEAC /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = F8C2609D2DF74EC900CEAEAC /* FirebaseAuth */; };
 /* End PBXBuildFile section */
 
@@ -32,6 +34,7 @@
 		F8B318212DE757D600E9FE47 /* fitnessApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = fitnessApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8B318312DE757D900E9FE47 /* fitnessAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = fitnessAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8B3183B2DE757D900E9FE47 /* fitnessAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = fitnessAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F8B82E0B2E0B138800CA284E /* AddExerciseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddExerciseView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -59,6 +62,7 @@
 			files = (
 				F8B318522DE75BE900E9FE47 /* FirebaseAnalytics in Frameworks */,
 				F8C2609E2DF74EC900CEAEAC /* FirebaseAuth in Frameworks */,
+				F89AC0052E29467A0017FC00 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -82,6 +86,7 @@
 		F8B318182DE757D600E9FE47 = {
 			isa = PBXGroup;
 			children = (
+				F8B82E0B2E0B138800CA284E /* AddExerciseView.swift */,
 				F8B318232DE757D600E9FE47 /* fitnessApp */,
 				F8B318342DE757D900E9FE47 /* fitnessAppTests */,
 				F8B3183E2DE757D900E9FE47 /* fitnessAppUITests */,
@@ -129,6 +134,7 @@
 			packageProductDependencies = (
 				F8B318512DE75BE900E9FE47 /* FirebaseAnalytics */,
 				F8C2609D2DF74EC900CEAEAC /* FirebaseAuth */,
+				F89AC0042E29467A0017FC00 /* FirebaseFirestore */,
 			);
 			productName = fitnessApp;
 			productReference = F8B318212DE757D600E9FE47 /* fitnessApp.app */;
@@ -256,6 +262,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F8B82E0C2E0B138800CA284E /* AddExerciseView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -591,6 +598,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		F89AC0042E29467A0017FC00 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F8B318502DE75BE900E9FE47 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
 		F8B318512DE75BE900E9FE47 /* FirebaseAnalytics */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = F8B318502DE75BE900E9FE47 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
