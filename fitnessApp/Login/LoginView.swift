@@ -31,10 +31,11 @@ final class SignInEmailViewModel: ObservableObject {
             return
         }
 
-        try await AuthenticationManager.shared.signInUser(
+        let authDataResult = try await AuthenticationManager.shared.signInUser(
             email: email,
             password: password
         )
+        try await UserManager.shared.createNewUser(auth: authDataResult)
     }
 
 }
@@ -89,13 +90,25 @@ struct LoginView: View {
                     Button {
                         Task {
                             do {
+//                                let authDataResult = try await AuthenticationManager.shared.signInUser(email: viewModel.email, password: viewModel.password)
+//                                signInErrorMessage = nil
+//                                isSignedIn = true
+//                                
+//                                Task{
+//                                    do{
+//                                        try await UserManager.shared.createNewUser(auth: authDataResult)
+//                                    } catch {
+//                                        print("Failed: \(error.localizedDescription)")
+//                                    }
+//                                }
                                 try await viewModel.signIn()
                                 signInErrorMessage = nil
                                 isSignedIn = true
                                 return
                             } catch {
-                                signInErrorMessage =
-                                    "Invalid email or password. Please try again."
+                                signInErrorMessage = "Invalid email or password. Please try again. "
+//                                signInErrorMessage = error.localizedDescription
+//                                print("SignIn error: \(error)")
                             }
                         }
                     } label: {
