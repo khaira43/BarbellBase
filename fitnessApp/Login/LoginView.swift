@@ -19,10 +19,11 @@ final class SignInEmailViewModel: ObservableObject {
             return
         }
 
-        try await AuthenticationManager.shared.createUser(
+        let authDataResult = try await AuthenticationManager.shared.createUser(
             email: email,
             password: password
         )
+        try await UserManager.shared.createNewUser(auth: authDataResult)
     }
 
     func signIn() async throws {
