@@ -8,6 +8,14 @@
 import Foundation
 import FirebaseFirestore
 
+struct DBUser {
+    let userId: String
+    let isAnonymous: Bool?
+    let email: String?
+    let photoUrl: String?
+    let dateCreated: Date?
+}
+
 final class UserManager {
     
     static let shared = UserManager()
@@ -36,6 +44,21 @@ final class UserManager {
 //        try await docRef.setData(userData, merge: true)
         try await Firestore.firestore().collection("users").document(auth.uid).setData(userData, merge: false)
         
+    }
+    
+    func getUser(userId: String) async throws -> DBUser {
+        let snapshot = try await Firestore.firestore().collection("users").document(userId).getDocument()
+        guard let data = snapshot.data(), let userId = data["user_id"] as? String else {
+            throw URLError(.badServerResponse)
+        }
+        
+        
+        let isAnonymous = data["is_anonymous"] as? Bool
+        let email = data["email"] as? String
+        let photoUrl = data["photo_url"] as? String
+        let dateCreated = data["date_created"] as? Date
+        
+        return DBUser(userId: userId, isAnonymous: isAnonymous, email: email, photoUrl: photoUrl, dateCreated: dateCreated)
     }
     
     
