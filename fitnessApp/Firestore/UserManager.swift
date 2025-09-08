@@ -14,6 +14,33 @@ struct DBUser: Codable {
     let email: String?
     let photoUrl: String?
     let dateCreated: Date?
+    let isPremium: Bool?
+    
+    init(auth: AuthDataResultModel) {
+        self.userId = auth.uid
+        self.isAnonymous = auth.isAnonymous
+        self.email = auth.email
+        self.photoUrl = auth.photoUrl
+        self.dateCreated = Date()
+        self.isPremium = false
+    }
+    
+    init(
+        userId: String,
+        isAnonymous: Bool? = nil,
+        email: String? = nil,
+        photoUrl: String? = nil,
+        dateCreated: Date? = nil,
+        isPremium: Bool? = nil
+    ) {
+        self.userId = userId
+        self.isAnonymous = isAnonymous
+        self.email = email
+        self.photoUrl = photoUrl
+        self.dateCreated = dateCreated
+        self.isPremium = isPremium
+    }
+    
 }
 
 final class UserManager {
@@ -70,6 +97,10 @@ final class UserManager {
     
     func getUser(userId: String) async throws -> DBUser {
         try await userDocument(userId: userId).getDocument(as: DBUser.self, decoder: decoder)
+    }
+    
+    func updateUserPremiumStatus(user: DBUser) async throws {
+        try userDocument(userId: user.userId).setData(from: user, merge: true, encoder: encoder)
     }
     
 //    func getUser(userId: String) async throws -> DBUser {
