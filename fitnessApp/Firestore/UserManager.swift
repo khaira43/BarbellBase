@@ -41,6 +41,17 @@ struct DBUser: Codable {
         self.isPremium = isPremium
     }
     
+    func togglePremiumStatus() -> DBUser {
+        let currentValue = isPremium ?? false
+        return DBUser(
+            userId: userId,
+            isAnonymous: isAnonymous,
+            email: email,
+            photoUrl: photoUrl,
+            dateCreated: dateCreated,
+            isPremium: !currentValue)
+    }
+    
 }
 
 final class UserManager {
