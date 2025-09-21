@@ -14,7 +14,7 @@ struct DBUser: Codable {
     let email: String?
     let photoUrl: String?
     let dateCreated: Date?
-    let isPremium: Bool?
+    var isPremium: Bool?
     
     init(auth: AuthDataResultModel) {
         self.userId = auth.uid
@@ -41,15 +41,20 @@ struct DBUser: Codable {
         self.isPremium = isPremium
     }
     
-    func togglePremiumStatus() -> DBUser {
+//    func togglePremiumStatus() -> DBUser {
+//        let currentValue = isPremium ?? false
+//        return DBUser(
+//            userId: userId,
+//            isAnonymous: isAnonymous,
+//            email: email,
+//            photoUrl: photoUrl,
+//            dateCreated: dateCreated,
+//            isPremium: !currentValue)
+//    }
+    
+    mutating func togglePremiumStatus(){
         let currentValue = isPremium ?? false
-        return DBUser(
-            userId: userId,
-            isAnonymous: isAnonymous,
-            email: email,
-            photoUrl: photoUrl,
-            dateCreated: dateCreated,
-            isPremium: !currentValue)
+        isPremium = !currentValue
     }
     
 }
@@ -112,6 +117,15 @@ final class UserManager {
     
     func updateUserPremiumStatus(user: DBUser) async throws {
         try userDocument(userId: user.userId).setData(from: user, merge: true, encoder: encoder)
+    }
+    
+    func updateUserPremiumStatus(userId: String, isPremium: Bool) async throws {
+        let data: [String:Any] = [
+            "user_isPremium" : isPremium
+            
+        ]
+        
+        try await userDocument(userId: userId).updateData(data)
     }
     
 //    func getUser(userId: String) async throws -> DBUser {
