@@ -154,7 +154,7 @@ final class UserManager {
     
     func updateUserPremiumStatus(userId: String, isPremium: Bool) async throws {
         let data: [String:Any] = [
-            "user_isPremium" : isPremium
+            DBUser.CodingKeys.isPremium.rawValue : isPremium
             
         ]
         
