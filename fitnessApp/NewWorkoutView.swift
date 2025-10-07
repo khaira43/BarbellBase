@@ -71,7 +71,7 @@ struct NewWorkoutView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") {
-                        // Save workout logic
+                        dismiss()
                     }
                     .foregroundColor(.red)
                 }

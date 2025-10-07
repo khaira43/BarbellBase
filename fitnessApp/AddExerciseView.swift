@@ -19,7 +19,7 @@ struct AddExerciseView: View {
                     .padding()
                     .background(Color(.secondarySystemBackground))
                     .cornerRadius(10)
-                    .foregroundColor(.black)
+                    .foregroundColor(.white)
 
                 Button("Add") {
                     if !exerciseName.isEmpty {
