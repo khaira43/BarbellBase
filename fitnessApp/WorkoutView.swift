@@ -7,82 +7,131 @@
 
 import SwiftUI
 
+@MainActor
+final class WorkoutListViewModel: ObservableObject {
+    @Published private(set) var templates: [WorkoutTemplate] = []
+    @Published private(set) var todaysTemplateId: String?
+    @Published var errorMessage: String?
+    @Published private(set) var isLoading: Bool = false
+
+    var userId: String? {
+        (try? AuthenticationManager.shared.getAuthenticatedUser())?.uid
+    }
+
+    var todaysTemplate: WorkoutTemplate? {
+        guard let id = todaysTemplateId else { return nil }
+        return templates.first { $0.id == id }
+    }
+
+    func load() async {
+        guard let uid = userId else { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            async let templatesTask = WorkoutTemplateManager.shared.listTemplates(userId: uid)
+            async let scheduleTask = ScheduleManager.shared.getSchedule(userId: uid)
+            let loadedTemplates = try await templatesTask
+            let schedule = try await scheduleTask
+            self.templates = loadedTemplates
+            self.todaysTemplateId = schedule.assignments[.today]
+            self.errorMessage = nil
+        } catch {
+            self.errorMessage = "Couldn't load workouts."
+        }
+    }
+}
+
 struct WorkoutView: View {
-    @State private var routines: [Routine] = []
-    @State private var recentWorkouts: [Workout] = []
+    @StateObject private var viewModel = WorkoutListViewModel()
 
     var body: some View {
         NavigationStack {
-            VStack {
-                HStack {
-                    Text("Workout")
-                        .font(.largeTitle.bold())
-                        .foregroundColor(.yellow)
-                        .padding(.horizontal)
-                    Spacer()
-                }
-                .padding(.top, 1)
-
-                Button(action: {
-                    // TODO: open active workout session for today's routine
-                }) {
-                    Text("Start Today's Workout")
-                        .fontWeight(.semibold)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.yellow)
-                        .foregroundColor(Color(hex: "#081f3a"))
-                        .cornerRadius(12)
-                        .padding(.horizontal)
-                }
-                .padding(.top)
-
+            ZStack {
+                Color(hex: "#081f3a").ignoresSafeArea()
                 ScrollView(.vertical) {
-                    sectionHeader("Routines")
+                    VStack(alignment: .leading, spacing: 0) {
+                        header
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 20) {
-                            if routines.isEmpty {
-                                NavigationLink(destination: RoutineView()) {
-                                    circleCard(label: "Add Routine", systemImage: "plus")
-                                }
-                            } else {
-                                ForEach(routines) { routine in
-                                    circleCard(label: routine.name, initial: routine.name.prefix(1))
-                                }
-                            }
+                        startTodayButton
+
+                        sectionHeader("Routines")
+                        routinesRow
+
+                        weeklyPlanLink
+
+                        sectionHeader("Recent Workouts")
+                        recentWorkoutsRow
+
+                        if let errorMessage = viewModel.errorMessage {
+                            Text(errorMessage)
+                                .font(.footnote)
+                                .foregroundColor(.red)
+                                .padding()
                         }
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
                     }
-
-                    sectionHeader("Recent Workouts")
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 20) {
-                            if recentWorkouts.isEmpty {
-                                NavigationLink(destination: NewWorkoutView()) {
-                                    circleCard(label: "Create Workout", systemImage: "plus")
-                                }
-                            } else {
-                                ForEach(recentWorkouts) { workout in
-                                    circleCard(label: workout.name, initial: workout.name.prefix(1))
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
-                    }
+                    .padding(.bottom, 24)
                 }
-
-                Spacer()
+                .refreshable {
+                    await viewModel.load()
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color(hex: "#081f3a"), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
-            .navigationBarBackButtonHidden(true)
-            .background(Color(hex: "#081f3a").ignoresSafeArea())
+            .task {
+                await viewModel.load()
+            }
+        }
+    }
+
+    private var header: some View {
+        HStack {
+            Text("Workout")
+                .font(.largeTitle.bold())
+                .foregroundColor(.yellow)
+                .padding(.horizontal)
+            Spacer()
+        }
+        .padding(.top, 1)
+    }
+
+    @ViewBuilder
+    private var startTodayButton: some View {
+        if let template = viewModel.todaysTemplate, let uid = viewModel.userId {
+            NavigationLink {
+                WorkoutTemplateEditorView(template: template, userId: uid)
+            } label: {
+                VStack(spacing: 4) {
+                    Text("Start Today's Workout")
+                        .fontWeight(.semibold)
+                    Text(template.name)
+                        .font(.caption)
+                        .opacity(0.8)
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.yellow)
+                .foregroundColor(Color(hex: "#081f3a"))
+                .cornerRadius(12)
+            }
+            .padding(.horizontal)
+            .padding(.top)
+        } else {
+            VStack(spacing: 4) {
+                Text("No Workout Scheduled for \(Weekday.today.displayName)")
+                    .fontWeight(.semibold)
+                Text("Assign one in your weekly plan.")
+                    .font(.caption)
+                    .opacity(0.8)
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(Color.yellow.opacity(0.2))
+            .foregroundColor(.yellow)
+            .cornerRadius(12)
+            .padding(.horizontal)
+            .padding(.top)
         }
     }
 
@@ -96,6 +145,76 @@ struct WorkoutView: View {
                 .padding(.leading)
                 .padding(.top, 24)
             Spacer()
+        }
+    }
+
+    @ViewBuilder
+    private var routinesRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 20) {
+                if let uid = viewModel.userId {
+                    NavigationLink {
+                        WorkoutTemplateEditorView(userId: uid)
+                    } label: {
+                        circleCard(label: "Add Routine", systemImage: "plus")
+                    }
+                }
+                ForEach(viewModel.templates) { template in
+                    if let uid = viewModel.userId {
+                        NavigationLink {
+                            WorkoutTemplateEditorView(template: template, userId: uid)
+                        } label: {
+                            circleCard(label: template.name, initial: template.name.prefix(1))
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+        }
+    }
+
+    @ViewBuilder
+    private var weeklyPlanLink: some View {
+        NavigationLink {
+            RoutineView()
+        } label: {
+            HStack {
+                Image(systemName: "calendar")
+                Text("Manage Weekly Plan")
+                    .fontWeight(.semibold)
+                Spacer()
+                Image(systemName: "chevron.right")
+            }
+            .padding()
+            .background(Color(hex: "#06152a"))
+            .foregroundColor(.yellow)
+            .cornerRadius(10)
+        }
+        .padding(.horizontal)
+        .padding(.top, 12)
+    }
+
+    @ViewBuilder
+    private var recentWorkoutsRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 20) {
+                VStack {
+                    Circle()
+                        .fill(Color.yellow.opacity(0.25))
+                        .frame(width: 80, height: 80)
+                        .overlay(
+                            Image(systemName: "clock")
+                                .font(.title)
+                                .foregroundColor(.yellow)
+                        )
+                    Text("Coming Soon")
+                        .foregroundColor(.white.opacity(0.7))
+                        .font(.footnote)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
         }
     }
 
@@ -122,18 +241,9 @@ struct WorkoutView: View {
             Text(label)
                 .foregroundColor(.white)
                 .font(.footnote)
+                .lineLimit(1)
         }
     }
-}
-
-struct Routine: Identifiable {
-    var id = UUID()
-    var name: String
-}
-
-struct Workout: Identifiable {
-    var id = UUID()
-    var name: String
 }
 
 #Preview {
