@@ -9,11 +9,13 @@ import FirebaseAuth
 import SwiftUI
 
 struct SignUpView: View {
+    @Environment(\.dismiss) private var dismiss
     @Binding var email: String
     @Binding var password: String
     @Binding var confirmPassword: String
     @Binding var errorMessage: String?
     @Binding var successMessage: String?
+    var onSignedUp: () -> Void = {}
     @State private var isPasswordVisible = false
     @State private var isConfirmPasswordVisible = false
     var body: some View {
@@ -111,11 +113,16 @@ struct SignUpView: View {
                             return
                         }
                         do {
-                            try await AuthenticationManager.shared.createUser(
+                            let authResult = try await AuthenticationManager.shared.createUser(
                                 email: email,
                                 password: password
                             )
+                            let dbUser = DBUser(auth: authResult)
+                            try await UserManager.shared.createNewUser(user: dbUser)
                             successMessage = "Account created successfully."
+                            try? await Task.sleep(nanoseconds: 700_000_000)
+                            dismiss()
+                            onSignedUp()
                         } catch {
                             if let err = error as NSError? {
                                 switch err.code {

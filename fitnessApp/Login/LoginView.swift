@@ -37,17 +37,16 @@ final class SignInEmailViewModel: ObservableObject {
             email: email,
             password: password
         )
-        
+
         let user = DBUser(auth: authDataResult)
-        try await UserManager.shared.createNewUser(user: user)
-//        try await UserManager.shared.createNewUser(auth: authDataResult)
+        try await UserManager.shared.ensureUserExists(user: user)
     }
 
 }
 
 struct LoginView: View {
     @StateObject private var viewModel = SignInEmailViewModel()
-    @State private var isSignedIn = false
+    @Binding var showSignInView: Bool
     @State private var signInErrorMessage: String?
     @State private var showingResetSheet = false
     @State private var resetEmail = ""
@@ -60,6 +59,10 @@ struct LoginView: View {
     @State private var signUpErrorMessage: String?
     @State private var signUpSuccessMessage: String?
 
+    init(showSignInView: Binding<Bool> = .constant(true)) {
+        self._showSignInView = showSignInView
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -70,14 +73,12 @@ struct LoginView: View {
 
                     Spacer()
 
-                    // LOGO Placeholder – Replace with your actual logo
-                    Image("Barbellbase")  // Add your logo image to the Assets folder and name it "AppLogo"
+                    Image("Barbellbase")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 300, height: 300)
                         .padding(.bottom, 30)
 
-                    // Email Field
                     TextField("Email", text: $viewModel.email)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
@@ -85,35 +86,19 @@ struct LoginView: View {
                         .background(Color(.secondarySystemBackground))
                         .cornerRadius(10)
 
-                    // Password Field
                     SecureField("Password", text: $viewModel.password)
                         .padding()
                         .background(Color(.secondarySystemBackground))
                         .cornerRadius(10)
 
-                    // Sign In Button
                     Button {
                         Task {
                             do {
-//                                let authDataResult = try await AuthenticationManager.shared.signInUser(email: viewModel.email, password: viewModel.password)
-//                                signInErrorMessage = nil
-//                                isSignedIn = true
-//                                
-//                                Task{
-//                                    do{
-//                                        try await UserManager.shared.createNewUser(auth: authDataResult)
-//                                    } catch {
-//                                        print("Failed: \(error.localizedDescription)")
-//                                    }
-//                                }
                                 try await viewModel.signIn()
                                 signInErrorMessage = nil
-                                isSignedIn = true
-                                return
+                                showSignInView = false
                             } catch {
-                                signInErrorMessage = "Invalid email or password. Please try again. "
-//                                signInErrorMessage = error.localizedDescription
-//                                print("SignIn error: \(error)")
+                                signInErrorMessage = "Invalid email or password. Please try again."
                             }
                         }
                     } label: {
@@ -134,7 +119,6 @@ struct LoginView: View {
                             .padding(.top, -10)
                     }
 
-                    // Reset Password Link
                     Button {
                         showingResetSheet = true
                     } label: {
@@ -148,7 +132,7 @@ struct LoginView: View {
                             resetErrorMessage: $resetErrorMessage,
                             resetSuccessMessage: $resetSuccessMessage
                         )
-                        .presentationDetents([.fraction(0.35)])  // 👈 moved here
+                        .presentationDetents([.fraction(0.35)])
                         .presentationDragIndicator(.visible)
                         .onDisappear {
                             resetEmail = ""
@@ -159,7 +143,6 @@ struct LoginView: View {
 
                     Spacer()
 
-                    // Sign Up Link
                     HStack {
                         Text("Don't have an account?")
                             .foregroundColor(.yellow)
@@ -176,9 +159,12 @@ struct LoginView: View {
                                 password: $signUpPassword,
                                 confirmPassword: $signUpConfirmPassword,
                                 errorMessage: $signUpErrorMessage,
-                                successMessage: $signUpSuccessMessage
+                                successMessage: $signUpSuccessMessage,
+                                onSignedUp: {
+                                    showSignInView = false
+                                }
                             )
-                            .presentationDetents([.fraction(0.5)])  // 👈 moved here
+                            .presentationDetents([.fraction(0.5)])
                             .presentationDragIndicator(.visible)
                             .onDisappear {
                                 signUpEmail = ""
@@ -188,22 +174,12 @@ struct LoginView: View {
                                 signUpSuccessMessage = nil
                             }
                         }
-
-                    }
-
-                    NavigationLink(
-                        destination: WorkoutView(),
-                        isActive: $isSignedIn
-                    ) {
-                        EmptyView()
                     }
                 }
                 .padding()
             }
-
         }
     }
-
 }
 
 extension Color {

@@ -26,25 +26,38 @@ final class ProfileViewModel: ObservableObject {
     }
 }
 struct ProfileView: View {
-    
+
     @StateObject private var viewModel = ProfileViewModel()
     @Binding var showSignInView: Bool
-    
+
     var body: some View {
         List {
             if let user = viewModel.user {
-                Text("UserId: \(user.userId)")
-                if let isAnonymous = user.isAnonymous {
-                    Text("Is Anonymous: \(isAnonymous.description.capitalized)")
+                Section("Account") {
+                    if let email = user.email {
+                        LabeledContent("Email", value: email)
+                    }
+                    LabeledContent("User ID", value: String(user.userId.prefix(8)) + "…")
+                    if let isAnonymous = user.isAnonymous {
+                        LabeledContent("Anonymous", value: isAnonymous ? "Yes" : "No")
+                    }
                 }
-                Button {
-                    viewModel.togglePremiumStatus()
-                    
-                } label: {
-                    Text("User is premium: \((user.isPremium ?? false).description.capitalized)")
+
+                Section("Membership") {
+                    Button {
+                        viewModel.togglePremiumStatus()
+                    } label: {
+                        HStack {
+                            Text("Premium")
+                            Spacer()
+                            Text((user.isPremium ?? false) ? "Active" : "Inactive")
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
+            } else {
+                ProgressView()
             }
-            
         }
         .task {
             try? await viewModel.loadCurrentUser()
@@ -52,11 +65,12 @@ struct ProfileView: View {
         .navigationTitle("Profile")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-//                NavigationLink {
-//
-//                }
-                Image(systemName: "gear")
-                    .font(.headline)
+                NavigationLink {
+                    SettingsView(showSignInView: $showSignInView)
+                } label: {
+                    Image(systemName: "gear")
+                        .font(.headline)
+                }
             }
         }
     }

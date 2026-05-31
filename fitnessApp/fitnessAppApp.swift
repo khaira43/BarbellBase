@@ -15,8 +15,25 @@ struct fitnessAppApp: App {
 
     var body: some Scene {
         WindowGroup {
-            LoginView()
-            
+            RootView()
+        }
+    }
+}
+
+struct RootView: View {
+    @State private var showSignInView: Bool = true
+
+    var body: some View {
+        Group {
+            if showSignInView {
+                LoginView(showSignInView: $showSignInView)
+            } else {
+                RootTabView(showSignInView: $showSignInView)
+            }
+        }
+        .onAppear {
+            let authUser = try? AuthenticationManager.shared.getAuthenticatedUser()
+            showSignInView = (authUser == nil)
         }
     }
 }
