@@ -11,8 +11,10 @@ final class ActiveSessionViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isSaving: Bool = false
     @Published var didFinish: Bool = false
+    @Published var restRemaining: Int? = nil
 
     private var elapsedTimer: Timer?
+    private var restTask: Task<Void, Never>?
 
     init(session: WorkoutSession) {
         self.session = session
@@ -21,6 +23,7 @@ final class ActiveSessionViewModel: ObservableObject {
 
     deinit {
         elapsedTimer?.invalidate()
+        restTask?.cancel()
     }
 
     private func startElapsedTimer() {
@@ -44,6 +47,40 @@ final class ActiveSessionViewModel: ObservableObject {
         completedSetCount > 0 && !isSaving
     }
 
+    private static let restDurationSeconds = 90
+
+    func startRest() {
+        restTask?.cancel()
+        restRemaining = Self.restDurationSeconds
+        restTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                if Task.isCancelled { break }
+                await MainActor.run {
+                    guard let self, let r = self.restRemaining else { return }
+                    if r <= 1 {
+                        self.restRemaining = nil
+                    } else {
+                        self.restRemaining = r - 1
+                    }
+                }
+                let stop = await MainActor.run { self?.restRemaining == nil }
+                if stop { break }
+            }
+        }
+    }
+
+    func adjustRest(by delta: Int) {
+        guard let r = restRemaining else { return }
+        restRemaining = max(0, r + delta)
+    }
+
+    func skipRest() {
+        restTask?.cancel()
+        restTask = nil
+        restRemaining = nil
+    }
+
     func toggleSetComplete(exerciseId: String, setId: String) {
         guard let eIdx = session.exercises.firstIndex(where: { $0.id == exerciseId }),
               let sIdx = session.exercises[eIdx].sets.firstIndex(where: { $0.id == setId })
@@ -52,6 +89,9 @@ final class ActiveSessionViewModel: ObservableObject {
         set.isCompleted.toggle()
         set.completedAt = set.isCompleted ? Date() : nil
         session.exercises[eIdx].sets[sIdx] = set
+        if set.isCompleted {
+            startRest()
+        }
     }
 
     func updateReps(exerciseId: String, setId: String, reps: Int) {
@@ -113,6 +153,9 @@ struct ActiveSessionView: View {
                         }
                     }
                     .padding(.vertical, 16)
+                }
+                if let remaining = viewModel.restRemaining {
+                    restPill(remaining: remaining)
                 }
                 finishBar
             }
@@ -230,6 +273,32 @@ struct ActiveSessionView: View {
                 .font(.caption)
                 .foregroundColor(.white.opacity(0.5))
         }
+    }
+
+    private func restPill(remaining: Int) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Rest")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.7))
+                Text(formatElapsed(remaining))
+                    .font(.title3.monospacedDigit())
+                    .foregroundColor(.yellow)
+            }
+            Spacer()
+            Button("−15s") { viewModel.adjustRest(by: -15) }
+                .buttonStyle(.bordered)
+                .tint(.yellow)
+            Button("+15s") { viewModel.adjustRest(by: 15) }
+                .buttonStyle(.bordered)
+                .tint(.yellow)
+            Button("Skip") { viewModel.skipRest() }
+                .buttonStyle(.borderedProminent)
+                .tint(.yellow)
+                .foregroundColor(Color(hex: "#081f3a"))
+        }
+        .padding()
+        .background(Color(hex: "#0c2548"))
     }
 
     private var finishBar: some View {
