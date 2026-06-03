@@ -153,6 +153,24 @@ struct ActiveSessionView: View {
     }
 
     var body: some View {
+        Group {
+            if viewModel.didFinish {
+                SessionSummaryView(session: viewModel.session, mode: .finish) {
+                    dismiss()
+                }
+            } else {
+                sessionBody
+            }
+        }
+        .alert("Discard workout?", isPresented: $showingDiscardConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Discard", role: .destructive) { dismiss() }
+        } message: {
+            Text("Your logged sets won't be saved.")
+        }
+    }
+
+    private var sessionBody: some View {
         ZStack {
             Color(hex: "#081f3a").ignoresSafeArea()
             VStack(spacing: 0) {
@@ -176,15 +194,6 @@ struct ActiveSessionView: View {
                 }
                 finishBar
             }
-        }
-        .alert("Discard workout?", isPresented: $showingDiscardConfirm) {
-            Button("Cancel", role: .cancel) {}
-            Button("Discard", role: .destructive) { dismiss() }
-        } message: {
-            Text("Your logged sets won't be saved.")
-        }
-        .onChange(of: viewModel.didFinish) { _, finished in
-            if finished { dismiss() }
         }
     }
 
