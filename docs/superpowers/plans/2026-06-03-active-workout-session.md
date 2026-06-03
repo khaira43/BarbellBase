@@ -38,7 +38,7 @@ Throughout the plan, "build the app" means running this from the repo root:
 xcodebuild \
   -project fitnessApp.xcodeproj \
   -scheme fitnessApp \
-  -destination 'platform=iOS Simulator,name=iPhone 15' \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   build 2>&1 | grep -E "(error:|warning:|BUILD SUCCEEDED|BUILD FAILED)" | tail -40
 ```
 
