@@ -13,7 +13,7 @@ final class WorkoutTemplateEditorViewModel: ObservableObject {
     @Published var isSaving: Bool = false
 
     let userId: String
-    private let existingId: String?
+    let existingId: String?
     private let dateCreated: Date
 
     init(template: WorkoutTemplate? = nil, userId: String) {
@@ -25,6 +25,18 @@ final class WorkoutTemplateEditorViewModel: ObservableObject {
     }
 
     var isEditing: Bool { existingId != nil }
+
+    var snapshotForSession: WorkoutTemplate? {
+        guard let existingId else { return nil }
+        return WorkoutTemplate(
+            id: existingId,
+            userId: userId,
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Workout" : name,
+            exercises: exercises,
+            dateCreated: dateCreated,
+            dateUpdated: Date()
+        )
+    }
 
     var canSave: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -100,6 +112,7 @@ struct WorkoutTemplateEditorView: View {
     @StateObject private var viewModel: WorkoutTemplateEditorViewModel
     @State private var showingAddExercise = false
     @State private var showingDeleteConfirm = false
+    @State private var presentingSession: Bool = false
 
     init(template: WorkoutTemplate? = nil, userId: String) {
         _viewModel = StateObject(
@@ -128,6 +141,7 @@ struct WorkoutTemplateEditorView: View {
                 saveButton
 
                 if viewModel.isEditing {
+                    startButton
                     deleteButton
                 }
             }
@@ -154,6 +168,11 @@ struct WorkoutTemplateEditorView: View {
             }
         } message: {
             Text("This can't be undone.")
+        }
+        .fullScreenCover(isPresented: $presentingSession) {
+            if let template = viewModel.snapshotForSession {
+                ActiveSessionView(template: template, userId: viewModel.userId)
+            }
         }
     }
 
@@ -257,6 +276,25 @@ struct WorkoutTemplateEditorView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
         }
+        .padding(.horizontal)
+    }
+
+    private var startButton: some View {
+        Button {
+            presentingSession = true
+        } label: {
+            HStack {
+                Image(systemName: "play.fill")
+                Text("Start Workout")
+                    .fontWeight(.semibold)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.yellow.opacity(0.2))
+            .foregroundColor(.yellow)
+            .cornerRadius(10)
+        }
+        .disabled(viewModel.exercises.isEmpty)
         .padding(.horizontal)
     }
 }
