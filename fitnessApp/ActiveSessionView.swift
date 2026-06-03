@@ -108,6 +108,23 @@ final class ActiveSessionViewModel: ObservableObject {
         session.exercises[eIdx].sets[sIdx].actualWeight = weight
     }
 
+    func addSet(exerciseId: String) {
+        guard let eIdx = session.exercises.firstIndex(where: { $0.id == exerciseId }) else { return }
+        let lastSet = session.exercises[eIdx].sets.last
+        let newSet = LoggedSet(
+            targetReps: lastSet?.targetReps ?? 8,
+            targetWeight: lastSet?.targetWeight,
+            actualReps: lastSet?.actualReps,
+            actualWeight: lastSet?.actualWeight
+        )
+        session.exercises[eIdx].sets.append(newSet)
+    }
+
+    func removeSet(exerciseId: String, setId: String) {
+        guard let eIdx = session.exercises.firstIndex(where: { $0.id == exerciseId }) else { return }
+        session.exercises[eIdx].sets.removeAll { $0.id == setId }
+    }
+
     func finish() async {
         guard !isSaving else { return }
         isSaving = true
@@ -210,6 +227,21 @@ struct ActiveSessionView: View {
             }
             ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
                 setRow(exerciseId: exercise.id, set: set, index: index)
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            viewModel.removeSet(exerciseId: exercise.id, setId: set.id)
+                        } label: {
+                            Label("Delete Set", systemImage: "trash")
+                        }
+                    }
+            }
+            Button {
+                viewModel.addSet(exerciseId: exercise.id)
+            } label: {
+                Label("Add Set", systemImage: "plus")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.yellow)
+                    .padding(.top, 4)
             }
         }
         .padding()
