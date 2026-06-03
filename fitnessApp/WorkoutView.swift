@@ -43,6 +43,7 @@ final class WorkoutListViewModel: ObservableObject {
 
 struct WorkoutView: View {
     @StateObject private var viewModel = WorkoutListViewModel()
+    @State private var presentingSessionFor: WorkoutTemplate?
 
     var body: some View {
         NavigationStack {
@@ -82,6 +83,14 @@ struct WorkoutView: View {
             .task {
                 await viewModel.load()
             }
+            .fullScreenCover(item: $presentingSessionFor) { template in
+                if let uid = viewModel.userId {
+                    ActiveSessionView(template: template, userId: uid)
+                        .onDisappear {
+                            Task { await viewModel.load() }
+                        }
+                }
+            }
         }
     }
 
@@ -98,9 +107,9 @@ struct WorkoutView: View {
 
     @ViewBuilder
     private var startTodayButton: some View {
-        if let template = viewModel.todaysTemplate, let uid = viewModel.userId {
-            NavigationLink {
-                WorkoutTemplateEditorView(template: template, userId: uid)
+        if let template = viewModel.todaysTemplate, viewModel.userId != nil {
+            Button {
+                presentingSessionFor = template
             } label: {
                 VStack(spacing: 4) {
                     Text("Start Today's Workout")
