@@ -90,7 +90,6 @@ final class StatsViewModel: ObservableObject {
 
     func loadIfNeeded(userId: String) async    // call from StatsView.onAppear
     func refresh(userId: String) async          // pull-to-refresh; forces fetch
-    func reset()                                // sign-out: sessions = [], needsRefresh = true
 }
 ```
 
@@ -197,7 +196,7 @@ No write paths anywhere in this view.
 - **Deleted catalog exercises** — PR row renders with the denormalized `exerciseName` from `LoggedExercise`; category split falls back to `.other`; detail view still works off the in-memory sessions.
 - **Time zones / DST** — week math uses `Calendar.current` with `firstWeekday = 2`; `dateComponents([.weekOfYear], from:to:)` handles DST correctly.
 - **Sessions with `completedAt == nil`** — filtered out defensively; saved sessions should always have it set.
-- **Sign-out** — `RootTabView`'s auth observer calls `statsVM.reset()` so a new user doesn't see the previous user's stats.
+- **Sign-out** — when `showSignInView` flips true in `RootView`, `RootTabView` (and its `@StateObject var statsVM`) is torn down, so the next sign-in starts with a fresh empty VM. No explicit reset needed.
 - **Cache invalidation race** — if the notification fires while the Stats tab is on-screen, `needsRefresh` is set but no fetch happens until the next `.onAppear`. Acceptable; the user will see the new session next time they revisit the tab.
 - **Charts framework availability** — requires iOS 16+. Project already targets iOS 17, no gate needed.
 - **Double-fetch on first appear** — `loadIfNeeded` is the single entry point and gates on `sessions.isEmpty || needsRefresh`, so a second `.onAppear` while loading is a no-op.
@@ -227,4 +226,4 @@ No write paths anywhere in this view.
 **Modified:**
 - `fitnessApp/Placeholders/StatsView.swift` — deleted (moved to `fitnessApp/StatsView.swift`)
 - `fitnessApp/Firestore/WorkoutSessionManager.swift` — add `listAllCompletedSessions(userId:)` and `sessionSavedNotification`; post notification from `saveCompletedSession`
-- `fitnessApp/RootTabView.swift` — own a `StatsViewModel` instance, inject as `@EnvironmentObject`, and call `statsVM.reset()` on sign-out
+- `fitnessApp/RootTabView.swift` — own a `StatsViewModel` instance via `@StateObject` and inject as `@EnvironmentObject`
