@@ -7,6 +7,7 @@ import SwiftUI
 
 struct RootTabView: View {
     @Binding var showSignInView: Bool
+    @StateObject private var statsViewModel = StatsViewModel()
 
     init(showSignInView: Binding<Bool> = .constant(false)) {
         self._showSignInView = showSignInView
@@ -15,6 +16,7 @@ struct RootTabView: View {
     var body: some View {
         TabView {
             StatsView()
+                .environmentObject(statsViewModel)
                 .tabItem { Label("Stats", systemImage: "chart.bar") }
 
             FriendsView()
