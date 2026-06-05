@@ -85,8 +85,7 @@ final class StatsViewModel: ObservableObject {
     var totalWorkouts: Int { sessions.count }
 
     private var weekStartsWithSession: Set<Date> {
-        var calendar = Calendar.current
-        calendar.firstWeekday = 2 // Monday
+        let calendar = StatsMath.mondayCalendar()
         var starts: Set<Date> = []
         for session in sessions {
             guard let completed = session.completedAt else { continue }
@@ -102,8 +101,7 @@ final class StatsViewModel: ObservableObject {
     }
 
     var currentStreakWeeks: Int {
-        var calendar = Calendar.current
-        calendar.firstWeekday = 2
+        let calendar = StatsMath.mondayCalendar()
         let starts = weekStartsWithSession
         guard !starts.isEmpty else { return 0 }
         let today = Date()
@@ -124,8 +122,7 @@ final class StatsViewModel: ObservableObject {
     }
 
     var longestStreakWeeks: Int {
-        var calendar = Calendar.current
-        calendar.firstWeekday = 2
+        let calendar = StatsMath.mondayCalendar()
         let sorted = weekStartsWithSession.sorted()
         guard !sorted.isEmpty else { return 0 }
         var longest = 1
