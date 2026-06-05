@@ -55,6 +55,70 @@ final class StatsViewModel: ObservableObject {
         }
     }
 
+    var totalWorkouts: Int { sessions.count }
+
+    private var weekStartsWithSession: Set<Date> {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2 // Monday
+        var starts: Set<Date> = []
+        for session in sessions {
+            guard let completed = session.completedAt else { continue }
+            let components = calendar.dateComponents(
+                [.yearForWeekOfYear, .weekOfYear],
+                from: completed
+            )
+            if let weekStart = calendar.date(from: components) {
+                starts.insert(weekStart)
+            }
+        }
+        return starts
+    }
+
+    var currentStreakWeeks: Int {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2
+        let starts = weekStartsWithSession
+        guard !starts.isEmpty else { return 0 }
+        let today = Date()
+        let components = calendar.dateComponents(
+            [.yearForWeekOfYear, .weekOfYear],
+            from: today
+        )
+        guard var cursor = calendar.date(from: components) else { return 0 }
+        var streak = 0
+        while starts.contains(cursor) {
+            streak += 1
+            guard let previous = calendar.date(byAdding: .weekOfYear, value: -1, to: cursor) else {
+                break
+            }
+            cursor = previous
+        }
+        return streak
+    }
+
+    var longestStreakWeeks: Int {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2
+        let sorted = weekStartsWithSession.sorted()
+        guard !sorted.isEmpty else { return 0 }
+        var longest = 1
+        var current = 1
+        for index in 1..<sorted.count {
+            let diff = calendar.dateComponents(
+                [.weekOfYear],
+                from: sorted[index - 1],
+                to: sorted[index]
+            ).weekOfYear ?? 0
+            if diff == 1 {
+                current += 1
+                longest = max(longest, current)
+            } else {
+                current = 1
+            }
+        }
+        return longest
+    }
+
     private var userId: String? {
         (try? AuthenticationManager.shared.getAuthenticatedUser())?.uid
     }
@@ -117,10 +181,8 @@ struct StatsView: View {
                     if let errorMessage = vm.errorMessage {
                         errorBanner(errorMessage)
                     }
-                    // Tiles + cards land in Tasks 3–6
-                    Text("Loaded \(vm.sessions.count) sessions")
-                        .foregroundColor(.white.opacity(0.6))
-                        .padding()
+                    headerTiles
+                        .padding(.horizontal)
                 }
                 .padding(.bottom, 32)
             }
@@ -153,6 +215,41 @@ struct StatsView: View {
             .background(Color.red.opacity(0.4))
             .cornerRadius(8)
             .padding(.horizontal)
+    }
+
+    private var headerTiles: some View {
+        HStack(spacing: 12) {
+            statTile(
+                title: "Total Workouts",
+                value: "\(vm.totalWorkouts)",
+                subtitle: nil
+            )
+            statTile(
+                title: "Current Streak",
+                value: "\(vm.currentStreakWeeks)",
+                subtitle: "weeks · longest \(vm.longestStreakWeeks)"
+            )
+        }
+    }
+
+    private func statTile(title: String, value: String, subtitle: String?) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.6))
+            Text(value)
+                .font(.system(size: 34, weight: .bold, design: .rounded).monospacedDigit())
+                .foregroundColor(.yellow)
+            if let subtitle = subtitle {
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundColor(.white.opacity(0.6))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Color(hex: "#0c2548"))
+        .cornerRadius(12)
     }
 }
 
