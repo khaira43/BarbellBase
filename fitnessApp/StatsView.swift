@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import Charts
 
 // MARK: - Helper types
 
@@ -20,6 +21,32 @@ enum TimeWindow: String, CaseIterable, Identifiable {
         case .twelveWeeks: return "12w"
         case .allTime:     return "All"
         }
+    }
+}
+
+struct VolumeBin: Identifiable {
+    let id = UUID()
+    let label: String
+    let date: Date
+    let volume: Double
+}
+
+private enum StatsMath {
+    static func volume(of session: WorkoutSession) -> Double {
+        session.exercises.reduce(0) { exerciseSum, exercise in
+            exerciseSum + exercise.sets.reduce(0) { setSum, set in
+                guard set.isCompleted, let weight = set.actualWeight, weight > 0 else {
+                    return setSum
+                }
+                return setSum + Double(set.actualReps) * weight
+            }
+        }
+    }
+
+    static func mondayCalendar() -> Calendar {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2
+        return calendar
     }
 }
 
@@ -119,6 +146,119 @@ final class StatsViewModel: ObservableObject {
         return longest
     }
 
+    private var sessionsInWindow: [WorkoutSession] {
+        let calendar = StatsMath.mondayCalendar()
+        switch selectedWindow {
+        case .fourWeeks:
+            guard let cutoff = calendar.date(byAdding: .day, value: -28, to: Date()) else {
+                return sessions
+            }
+            return sessions.filter { ($0.completedAt ?? .distantPast) >= cutoff }
+        case .twelveWeeks:
+            guard let cutoff = calendar.date(byAdding: .weekOfYear, value: -12, to: Date()) else {
+                return sessions
+            }
+            return sessions.filter { ($0.completedAt ?? .distantPast) >= cutoff }
+        case .allTime:
+            return sessions
+        }
+    }
+
+    var windowSessionCount: Int { sessionsInWindow.count }
+
+    var windowTotalVolume: Double {
+        sessionsInWindow.reduce(0) { $0 + StatsMath.volume(of: $1) }
+    }
+
+    var volumeSeries: [VolumeBin] {
+        let calendar = StatsMath.mondayCalendar()
+        switch selectedWindow {
+        case .fourWeeks:
+            let formatter = DateFormatter()
+            formatter.dateFormat = "M/d"
+            return sessionsInWindow
+                .sorted { ($0.completedAt ?? .distantPast) < ($1.completedAt ?? .distantPast) }
+                .compactMap { session in
+                    guard let date = session.completedAt else { return nil }
+                    return VolumeBin(
+                        label: formatter.string(from: date),
+                        date: date,
+                        volume: StatsMath.volume(of: session)
+                    )
+                }
+        case .twelveWeeks:
+            return weeklyBins(weeks: 12, calendar: calendar)
+        case .allTime:
+            return monthlyBins(calendar: calendar)
+        }
+    }
+
+    private func weeklyBins(weeks: Int, calendar: Calendar) -> [VolumeBin] {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M/d"
+        let today = Date()
+        guard let thisWeekStart = calendar.date(
+            from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: today)
+        ) else { return [] }
+
+        var bins: [(weekStart: Date, volume: Double)] = []
+        for offset in (0..<weeks).reversed() {
+            if let start = calendar.date(byAdding: .weekOfYear, value: -offset, to: thisWeekStart) {
+                bins.append((start, 0))
+            }
+        }
+        for session in sessions {
+            guard let completed = session.completedAt else { continue }
+            let components = calendar.dateComponents(
+                [.yearForWeekOfYear, .weekOfYear],
+                from: completed
+            )
+            guard let weekStart = calendar.date(from: components) else { continue }
+            if let index = bins.firstIndex(where: { $0.weekStart == weekStart }) {
+                bins[index].volume += StatsMath.volume(of: session)
+            }
+        }
+        return bins.map {
+            VolumeBin(label: formatter.string(from: $0.weekStart), date: $0.weekStart, volume: $0.volume)
+        }
+    }
+
+    private func monthlyBins(calendar: Calendar) -> [VolumeBin] {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM yy"
+        guard let earliest = sessions.compactMap(\.completedAt).min() else { return [] }
+        let today = Date()
+        guard
+            let startMonth = calendar.date(
+                from: calendar.dateComponents([.year, .month], from: earliest)
+            ),
+            let endMonth = calendar.date(
+                from: calendar.dateComponents([.year, .month], from: today)
+            )
+        else { return [] }
+
+        var bins: [(monthStart: Date, volume: Double)] = []
+        var cursor = startMonth
+        while cursor <= endMonth {
+            bins.append((cursor, 0))
+            guard let next = calendar.date(byAdding: .month, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+        for session in sessions {
+            guard let completed = session.completedAt else { continue }
+            let monthStart = calendar.date(
+                from: calendar.dateComponents([.year, .month], from: completed)
+            )
+            guard let monthStart else { continue }
+            if let index = bins.firstIndex(where: { $0.monthStart == monthStart }) {
+                bins[index].volume += StatsMath.volume(of: session)
+            }
+        }
+        return bins.map {
+            VolumeBin(label: formatter.string(from: $0.monthStart), date: $0.monthStart, volume: $0.volume)
+        }
+    }
+
     private var userId: String? {
         (try? AuthenticationManager.shared.getAuthenticatedUser())?.uid
     }
@@ -183,6 +323,8 @@ struct StatsView: View {
                     }
                     headerTiles
                         .padding(.horizontal)
+                    volumeCard
+                        .padding(.horizontal)
                 }
                 .padding(.bottom, 32)
             }
@@ -230,6 +372,65 @@ struct StatsView: View {
                 subtitle: "weeks · longest \(vm.longestStreakWeeks)"
             )
         }
+    }
+
+    private var volumeCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Volume")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                Spacer()
+                Picker("Window", selection: $vm.selectedWindow) {
+                    ForEach(TimeWindow.allCases) { window in
+                        Text(window.label).tag(window)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 180)
+            }
+
+            if vm.volumeSeries.allSatisfy({ $0.volume == 0 }) {
+                Text("No volume in this window")
+                    .font(.footnote)
+                    .foregroundColor(.white.opacity(0.6))
+                    .frame(maxWidth: .infinity, minHeight: 200)
+            } else {
+                Chart(vm.volumeSeries) { bin in
+                    BarMark(
+                        x: .value("Date", bin.label),
+                        y: .value("Volume", bin.volume)
+                    )
+                    .foregroundStyle(Color.yellow)
+                }
+                .frame(height: 220)
+                .chartYAxis {
+                    AxisMarks { _ in
+                        AxisGridLine().foregroundStyle(Color.white.opacity(0.15))
+                        AxisValueLabel().foregroundStyle(Color.white.opacity(0.6))
+                    }
+                }
+                .chartXAxis {
+                    AxisMarks { _ in
+                        AxisValueLabel().foregroundStyle(Color.white.opacity(0.6))
+                    }
+                }
+            }
+
+            Text("Total this window: \(formatVolume(vm.windowTotalVolume)) lbs · \(vm.windowSessionCount) session\(vm.windowSessionCount == 1 ? "" : "s")")
+                .font(.footnote)
+                .foregroundColor(.white.opacity(0.7))
+        }
+        .padding(14)
+        .background(Color(hex: "#0c2548"))
+        .cornerRadius(12)
+    }
+
+    private func formatVolume(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "0"
     }
 
     private func statTile(title: String, value: String, subtitle: String?) -> some View {
