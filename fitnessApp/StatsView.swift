@@ -347,6 +347,51 @@ final class StatsViewModel: ObservableObject {
             }
             .sorted { $0.bestEstimated1RM > $1.bestEstimated1RM }
     }
+
+    var categorySplit: [(category: ExerciseCategory, volume: Double)] {
+        let catalog = ExerciseCatalog.shared.all
+        let lookup: [String: ExerciseCategory] = Dictionary(
+            uniqueKeysWithValues: catalog.map { ($0.id, $0.category) }
+        )
+
+        var totals: [ExerciseCategory: Double] = [:]
+        for session in sessionsInWindow {
+            for exercise in session.exercises {
+                let category = lookup[exercise.exerciseId] ?? .other
+                let exerciseVolume = exercise.sets.reduce(0.0) { sum, set in
+                    guard set.isCompleted, let weight = set.actualWeight, weight > 0 else {
+                        return sum
+                    }
+                    return sum + Double(set.actualReps) * weight
+                }
+                if exerciseVolume > 0 {
+                    totals[category, default: 0] += exerciseVolume
+                }
+            }
+        }
+
+        return totals
+            .filter { $0.value > 0 }
+            .map { ($0.key, $0.value) }
+            .sorted { $0.1 > $1.1 }
+    }
+}
+
+// MARK: - Category color helper
+
+private extension ExerciseCategory {
+    var color: Color {
+        switch self {
+        case .chest:     return Color.red
+        case .back:      return Color.blue
+        case .shoulders: return Color.orange
+        case .arms:      return Color.purple
+        case .legs:      return Color.green
+        case .core:      return Color.pink
+        case .cardio:    return Color.teal
+        case .other:     return Color.gray
+        }
+    }
 }
 
 // MARK: - StatsView
@@ -387,6 +432,10 @@ struct StatsView: View {
                         .padding(.horizontal)
                     prCard
                         .padding(.horizontal)
+                    if !vm.categorySplit.isEmpty {
+                        categoryCard
+                            .padding(.horizontal)
+                    }
                 }
                 .padding(.bottom, 32)
             }
@@ -518,6 +567,47 @@ struct StatsView: View {
                     .font(.footnote)
                     .foregroundColor(.yellow)
                     .padding(.top, 4)
+                }
+            }
+        }
+        .padding(14)
+        .background(Color(hex: "#0c2548"))
+        .cornerRadius(12)
+    }
+
+    private var categoryCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Volume by Category")
+                .font(.headline)
+                .foregroundColor(.white)
+
+            let total = vm.categorySplit.reduce(0) { $0 + $1.volume }
+            GeometryReader { geo in
+                HStack(spacing: 0) {
+                    ForEach(vm.categorySplit, id: \.category) { entry in
+                        Rectangle()
+                            .fill(entry.category.color)
+                            .frame(width: geo.size.width * CGFloat(entry.volume / max(total, 1)))
+                    }
+                }
+            }
+            .frame(height: 18)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+                ForEach(vm.categorySplit, id: \.category) { entry in
+                    HStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(entry.category.color)
+                            .frame(width: 10, height: 10)
+                        Text(entry.category.displayName)
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.85))
+                        Spacer()
+                        Text("\(Int((entry.volume / max(total, 1)) * 100))%")
+                            .font(.caption.monospacedDigit())
+                            .foregroundColor(.white.opacity(0.6))
+                    }
                 }
             }
         }
