@@ -78,6 +78,7 @@ final class StatsViewModel: ObservableObject {
     @Published var selectedWindow: TimeWindow = .twelveWeeks
 
     private var needsRefresh: Bool = true
+    private var hasFetched: Bool = false
     private var sessionSavedObserver: NSObjectProtocol?
 
     init() {
@@ -170,7 +171,13 @@ final class StatsViewModel: ObservableObject {
             }
             return sessions.filter { ($0.completedAt ?? .distantPast) >= cutoff }
         case .twelveWeeks:
-            guard let cutoff = calendar.date(byAdding: .weekOfYear, value: -12, to: Date()) else {
+            let today = Date()
+            guard
+                let thisWeekStart = calendar.date(
+                    from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: today)
+                ),
+                let cutoff = calendar.date(byAdding: .weekOfYear, value: -11, to: thisWeekStart)
+            else {
                 return sessions
             }
             return sessions.filter { ($0.completedAt ?? .distantPast) >= cutoff }
@@ -280,7 +287,7 @@ final class StatsViewModel: ObservableObject {
 
     func loadIfNeeded() async {
         guard let uid = userId else { return }
-        guard sessions.isEmpty || needsRefresh else { return }
+        guard !hasFetched || needsRefresh else { return }
         await fetch(userId: uid)
     }
 
@@ -298,6 +305,7 @@ final class StatsViewModel: ObservableObject {
                 .filter { $0.completedAt != nil }
             self.sessions = loaded
             self.needsRefresh = false
+            self.hasFetched = true
             self.errorMessage = nil
         } catch {
             self.errorMessage = "Couldn't load stats. Pull to refresh."
