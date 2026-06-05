@@ -82,7 +82,7 @@ struct ExerciseDetailView: View {
                 guard set.isCompleted, let weight = set.actualWeight, weight > 0 else {
                     return nil
                 }
-                return weight * (1.0 + Double(set.actualReps) / 30.0)
+                return StatsMath.epleyOneRepMax(weight: weight, reps: set.actualReps)
             }
             .max() ?? 0
     }
@@ -234,7 +234,7 @@ struct ExerciseDetailView: View {
         return sets.enumerated().map { index, set in
             let weight = set.actualWeight ?? 0
             let e1rm = weight > 0
-                ? weight * (1.0 + Double(set.actualReps) / 30.0)
+                ? StatsMath.epleyOneRepMax(weight: weight, reps: set.actualReps)
                 : 0
             if weight > 0 {
                 return "Set \(index + 1) — \(set.actualReps) × \(formatNumber(weight)) lbs (e1RM \(formatNumber(e1rm)))"

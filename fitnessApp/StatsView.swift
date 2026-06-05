@@ -45,7 +45,7 @@ struct ExerciseDetailDestination: Hashable {
     let exerciseName: String
 }
 
-private enum StatsMath {
+enum StatsMath {
     static func volume(of session: WorkoutSession) -> Double {
         session.exercises.reduce(0) { exerciseSum, exercise in
             exerciseSum + exercise.sets.reduce(0) { setSum, set in
