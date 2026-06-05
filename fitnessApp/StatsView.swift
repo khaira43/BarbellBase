@@ -410,6 +410,12 @@ struct StatsView: View {
             .toolbarBackground(Color(hex: "#081f3a"), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .navigationDestination(for: ExerciseDetailDestination.self) { destination in
+                ExerciseDetailView(
+                    exerciseId: destination.exerciseId,
+                    exerciseName: destination.exerciseName
+                )
+            }
         }
         .task { await vm.loadIfNeeded() }
     }
