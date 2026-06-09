@@ -8,6 +8,7 @@ import SwiftUI
 struct RootTabView: View {
     @Binding var showSignInView: Bool
     @StateObject private var statsViewModel = StatsViewModel()
+    @StateObject private var goalsViewModel = GoalsViewModel()
 
     init(showSignInView: Binding<Bool> = .constant(false)) {
         self._showSignInView = showSignInView
@@ -31,6 +32,8 @@ struct RootTabView: View {
             .tabItem { Label("Profile", systemImage: "person") }
 
             GoalsView()
+                .environmentObject(goalsViewModel)
+                .environmentObject(statsViewModel)
                 .tabItem { Label("Goals", systemImage: "target") }
         }
         .tint(.yellow)
