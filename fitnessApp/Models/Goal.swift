@@ -9,9 +9,9 @@ struct Goal: Codable, Identifiable, Hashable {
     enum Kind: String, Codable { case lift, frequency, bodyweight }
     enum Status: String, Codable { case active, completed }
 
-    var id: String
-    var kind: Kind
-    var createdAt: Date
+    let id: String
+    let kind: Kind
+    let createdAt: Date
     var status: Status
     var completedAt: Date?
     var targetDate: Date?
@@ -56,8 +56,8 @@ struct Goal: Codable, Identifiable, Hashable {
 }
 
 struct LiftTarget: Codable, Hashable {
-    var exerciseId: String
-    var exerciseName: String
+    let exerciseId: String
+    let exerciseName: String
     var targetE1RM: Double
 
     enum CodingKeys: String, CodingKey {
@@ -77,7 +77,7 @@ struct FrequencyTarget: Codable, Hashable {
 
 struct BodyweightTarget: Codable, Hashable {
     var targetWeightLb: Double
-    var startWeightLb: Double
+    let startWeightLb: Double
 
     enum CodingKeys: String, CodingKey {
         case targetWeightLb = "target_weight_lb"

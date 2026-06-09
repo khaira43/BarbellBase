@@ -6,9 +6,9 @@
 import Foundation
 
 struct BodyweightEntry: Codable, Identifiable, Hashable {
-    var id: String
-    var weightLb: Double
-    var loggedAt: Date
+    let id: String
+    let weightLb: Double
+    let loggedAt: Date
 
     init(id: String = UUID().uuidString, weightLb: Double, loggedAt: Date = Date()) {
         self.id = id
