@@ -22,7 +22,7 @@ enum GoalsMath {
         for session in sessions {
             for exercise in session.exercises where exercise.exerciseId == lift.exerciseId {
                 for set in exercise.sets {
-                    guard let weight = set.actualWeight, weight > 0, set.actualReps > 0 else { continue }
+                    guard set.isCompleted, let weight = set.actualWeight, weight > 0, set.actualReps > 0 else { continue }
                     sawAnySet = true
                     let e1rm = StatsMath.epleyOneRepMax(weight: weight, reps: set.actualReps)
                     if e1rm > maxE1RM { maxE1RM = e1rm }
@@ -44,8 +44,7 @@ enum GoalsMath {
         guard let frequency = goal.frequency, frequency.workoutsPerWeek > 0 else {
             return GoalsProgress(percent: 0, currentDisplay: "0 / 0", targetDisplay: "0/wk", isHit: false)
         }
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.firstWeekday = 2 // Monday
+        let calendar = StatsMath.mondayCalendar()
         let weekStartComponents = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now)
         guard let weekStart = calendar.date(from: weekStartComponents),
               let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart) else {
