@@ -100,6 +100,7 @@ struct GoalsMathTests {
             sets: [(0, 5), (200, 0), (250, 8)] // only the last is valid
         )
         let p = GoalsMath.liftProgress(goal: liftGoal(targetE1RM: 300), sessions: [s])
+        #expect(p.percent == 1.0) // only the (250, 8) set drives this
         #expect(p.isHit == true)
     }
 
@@ -160,6 +161,7 @@ struct GoalsMathTests {
         )
         #expect(p.percent == 0)
         #expect(p.currentDisplay == "—")
+        #expect(p.isHit == false)
     }
 
     @Test func bodyweightProgress_cutPartial() {
