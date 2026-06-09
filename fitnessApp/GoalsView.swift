@@ -77,25 +77,96 @@ final class GoalsViewModel: ObservableObject {
 struct GoalsView: View {
     @EnvironmentObject private var goalsVM: GoalsViewModel
     @EnvironmentObject private var statsVM: StatsViewModel
+    @State private var showingAddSheet = false
 
     var body: some View {
         NavigationStack {
             ZStack {
                 Color(hex: "#081f3a").ignoresSafeArea()
-                ComingSoonContent(
-                    title: "Goals",
-                    systemImage: "target",
-                    subtitle: "Set targets for lifts, weight, and frequency."
-                )
+                contentBody
             }
             .navigationTitle("Goals")
             .toolbarBackground(Color(hex: "#081f3a"), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showingAddSheet = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .foregroundColor(.yellow)
+                }
+            }
             .task {
                 await goalsVM.loadIfNeeded()
                 await statsVM.loadIfNeeded()
             }
+            .refreshable {
+                await goalsVM.load()
+                await statsVM.refresh()
+            }
+            .sheet(isPresented: $showingAddSheet) {
+                Text("Add Goal sheet — added in Task 7")
+                    .foregroundColor(.white)
+                    .padding()
+                    .presentationDetents([.medium])
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var contentBody: some View {
+        if let errorMessage = goalsVM.errorMessage {
+            errorBanner(errorMessage)
+        } else if goalsVM.activeGoals.isEmpty && goalsVM.completedGoals.isEmpty {
+            emptyState
+        } else {
+            goalsList
+        }
+    }
+
+    private var emptyState: some View {
+        ComingSoonContent(
+            title: "No goals yet",
+            systemImage: "target",
+            subtitle: "Tap + to add a goal for a lift, your weekly workouts, or your bodyweight."
+        )
+    }
+
+    private func errorBanner(_ message: String) -> some View {
+        VStack {
+            Text(message)
+                .foregroundColor(.white)
+                .padding()
+                .background(Color.red.opacity(0.8))
+                .cornerRadius(12)
+            Spacer()
+        }
+        .padding()
+    }
+
+    private var goalsList: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(goalsVM.activeLiftGoals) { goal in
+                    Text("Lift goal placeholder: \(goal.lift?.exerciseName ?? "?")")
+                        .foregroundColor(.white)
+                        .padding()
+                }
+                if let freq = goalsVM.activeFrequencyGoal {
+                    Text("Frequency goal placeholder: \(freq.frequency?.workoutsPerWeek ?? 0)/wk")
+                        .foregroundColor(.white)
+                        .padding()
+                }
+                if let bw = goalsVM.activeBodyweightGoal {
+                    Text("Bodyweight goal placeholder: target \(Int(bw.bodyweight?.targetWeightLb ?? 0)) lb")
+                        .foregroundColor(.white)
+                        .padding()
+                }
+            }
+            .padding()
         }
     }
 }
