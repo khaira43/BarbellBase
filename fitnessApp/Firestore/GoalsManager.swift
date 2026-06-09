@@ -80,11 +80,13 @@ final class GoalsManager {
     func markCompleted(userId: String, goalId: String, at completionDate: Date, silent: Bool) async throws {
         let ref = goalDocument(userId: userId, goalId: goalId)
         let snapshot = try await ref.getDocument()
-        guard var goal = try? snapshot.data(as: Goal.self) else { return }
+        guard snapshot.exists else { return }
+        let goal = try snapshot.data(as: Goal.self)
         if goal.status == .completed { return }
-        goal.status = .completed
-        goal.completedAt = completionDate
-        try ref.setData(from: goal, merge: false)
+        var updated = goal
+        updated.status = .completed
+        updated.completedAt = completionDate
+        try ref.setData(from: updated, merge: false)
         if !silent {
             NotificationCenter.default.post(name: Self.goalSavedNotification, object: nil)
         }
