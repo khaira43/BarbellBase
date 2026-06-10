@@ -5,6 +5,7 @@
 
 import SwiftUI
 import Combine
+import Charts
 import FirebaseAuth
 
 @MainActor
@@ -78,6 +79,7 @@ struct GoalsView: View {
     @EnvironmentObject private var goalsVM: GoalsViewModel
     @EnvironmentObject private var statsVM: StatsViewModel
     @State private var showingAddSheet = false
+    @State private var showingLogWeight = false
 
     var body: some View {
         NavigationStack {
@@ -111,6 +113,11 @@ struct GoalsView: View {
                 AddGoalSheet()
                     .environmentObject(goalsVM)
                     .presentationDetents([.large])
+            }
+            .sheet(isPresented: $showingLogWeight) {
+                LogBodyweightSheet()
+                    .environmentObject(goalsVM)
+                    .presentationDetents([.medium])
             }
         }
     }
@@ -178,9 +185,13 @@ struct GoalsView: View {
                     )
                 }
                 if let bw = goalsVM.activeBodyweightGoal {
-                    Text("Bodyweight goal placeholder: target \(Int(bw.bodyweight?.targetWeightLb ?? 0)) lb")
-                        .foregroundColor(.white)
-                        .padding()
+                    BodyweightGoalCard(
+                        goal: bw,
+                        entries: goalsVM.bodyweightEntries,
+                        onTapCard: { /* push BodyweightDetailView — Task 11 */ },
+                        onTapLog: { showingLogWeight = true },
+                        onDelete: { Task { await deleteGoal(bw) } }
+                    )
                 }
             }
             .padding()
@@ -292,6 +303,94 @@ struct FrequencyGoalCard: View {
         .swipeActions(edge: .trailing) {
             Button(role: .destructive, action: onDelete) {
                 Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+}
+
+struct BodyweightGoalCard: View {
+    let goal: Goal
+    let entries: [BodyweightEntry]
+    let onTapCard: () -> Void
+    let onTapLog: () -> Void
+    let onDelete: () -> Void
+
+    private var progress: GoalsProgress {
+        GoalsMath.bodyweightProgress(goal: goal, entries: entries)
+    }
+
+    private var trendEntries: [BodyweightEntry] {
+        let cutoff = Calendar.current.date(byAdding: .day, value: -28, to: Date()) ?? Date()
+        return entries.filter { $0.loggedAt >= cutoff }.sorted { $0.loggedAt < $1.loggedAt }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Button(action: onTapCard) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "figure.arms.open")
+                            .foregroundColor(.yellow)
+                        Text("Bodyweight")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        Spacer()
+                        deadlinePill
+                    }
+                    Text(progress.currentDisplay)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.white)
+                    ProgressView(value: progress.percent)
+                        .tint(.yellow)
+                    Text("Start \(Int((goal.bodyweight?.startWeightLb ?? 0).rounded())) → Target \(progress.targetDisplay)")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
+                    if trendEntries.count >= 2 {
+                        Chart(trendEntries) { e in
+                            LineMark(x: .value("Date", e.loggedAt), y: .value("Weight", e.weightLb))
+                                .foregroundStyle(Color.yellow)
+                        }
+                        .chartXAxis(.hidden)
+                        .chartYAxis(.hidden)
+                        .frame(height: 60)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            Button(action: onTapLog) {
+                Text("Log weight")
+                    .font(.subheadline).bold()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.yellow)
+                    .foregroundColor(.black)
+                    .cornerRadius(10)
+            }
+        }
+        .padding()
+        .background(Color.white.opacity(0.06))
+        .cornerRadius(14)
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var deadlinePill: some View {
+        if let target = goal.targetDate {
+            let days = Calendar.current.dateComponents([.day], from: Date(), to: target).day ?? 0
+            if days < 0 {
+                Text("Overdue").font(.caption2).bold()
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Color.red.opacity(0.7))
+                    .foregroundColor(.white).cornerRadius(8)
+            } else {
+                Text("Due in \(days)d").font(.caption2).bold()
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Color.white.opacity(0.2))
+                    .foregroundColor(.white).cornerRadius(8)
             }
         }
     }
