@@ -53,6 +53,37 @@ final class GoalsViewModel: ObservableObject {
         await load()
     }
 
+    func evaluateAndPersistCompletions(sessions: [WorkoutSession]) async {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        var didChange = false
+        for goal in activeGoals {
+            let isHit: Bool
+            switch goal.kind {
+            case .lift:
+                isHit = GoalsMath.liftProgress(goal: goal, sessions: sessions).isHit
+            case .bodyweight:
+                isHit = GoalsMath.bodyweightProgress(goal: goal, entries: bodyweightEntries).isHit
+            case .frequency:
+                continue
+            }
+            if isHit {
+                do {
+                    try await GoalsManager.shared.markCompleted(userId: userId, goalId: goal.id, at: Date(), silent: true)
+                    didChange = true
+                } catch {
+                    // Non-fatal; eval will retry on next reload.
+                }
+            }
+        }
+        if didChange {
+            do {
+                goals = try await GoalsManager.shared.listGoals(userId: userId)
+            } catch {
+                errorMessage = "Couldn't refresh after completion."
+            }
+        }
+    }
+
     func load() async {
         guard let userId = Auth.auth().currentUser?.uid else {
             errorMessage = "Not signed in."
@@ -105,10 +136,12 @@ struct GoalsView: View {
             .task {
                 await goalsVM.loadIfNeeded()
                 await statsVM.loadIfNeeded()
+                await goalsVM.evaluateAndPersistCompletions(sessions: statsVM.sessions)
             }
             .refreshable {
                 await goalsVM.load()
                 await statsVM.refresh()
+                await goalsVM.evaluateAndPersistCompletions(sessions: statsVM.sessions)
             }
             .sheet(isPresented: $showingAddSheet) {
                 AddGoalSheet()
@@ -204,6 +237,21 @@ struct GoalsView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                }
+                if !goalsVM.completedGoals.isEmpty {
+                    DisclosureGroup("Completed (\(goalsVM.completedGoals.count))") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(goalsVM.completedGoals) { goal in
+                                CompletedGoalRow(goal: goal, onDelete: { Task { await deleteGoal(goal) } })
+                            }
+                        }
+                        .padding(.top, 8)
+                    }
+                    .accentColor(.white)
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(Color.white.opacity(0.04))
+                    .cornerRadius(12)
                 }
             }
             .padding()
@@ -404,6 +452,56 @@ struct BodyweightGoalCard: View {
                     .background(Color.white.opacity(0.2))
                     .foregroundColor(.white).cornerRadius(8)
             }
+        }
+    }
+}
+
+struct CompletedGoalRow: View {
+    let goal: Goal
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack {
+            Image(systemName: iconName)
+                .foregroundColor(.yellow)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).foregroundColor(.white).font(.subheadline).bold()
+                if let date = goal.completedAt {
+                    Text("Hit on " + date.formatted(date: .abbreviated, time: .omitted))
+                        .foregroundColor(.white.opacity(0.7))
+                        .font(.caption)
+                }
+            }
+            Spacer()
+        }
+        .padding(.vertical, 6)
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+
+    private var iconName: String {
+        switch goal.kind {
+        case .lift: return "dumbbell"
+        case .frequency: return "calendar"
+        case .bodyweight: return "figure.arms.open"
+        }
+    }
+
+    private var title: String {
+        switch goal.kind {
+        case .lift:
+            let name = goal.lift?.exerciseName ?? "Lift"
+            let t = Int((goal.lift?.targetE1RM ?? 0).rounded())
+            return "\(name) — \(t) lb e1RM"
+        case .frequency:
+            let n = goal.frequency?.workoutsPerWeek ?? 0
+            return "Workouts: \(n)/wk"
+        case .bodyweight:
+            let t = Int((goal.bodyweight?.targetWeightLb ?? 0).rounded())
+            return "Bodyweight \(t) lb"
         }
     }
 }
