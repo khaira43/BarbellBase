@@ -115,6 +115,16 @@ struct GoalsView: View {
         }
     }
 
+    private func deleteGoal(_ goal: Goal) async {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        do {
+            try await GoalsManager.shared.deleteGoal(userId: userId, goalId: goal.id)
+            await goalsVM.load()
+        } catch {
+            goalsVM.errorMessage = "Couldn't delete goal."
+        }
+    }
+
     @ViewBuilder
     private var contentBody: some View {
         if let errorMessage = goalsVM.errorMessage {
@@ -150,9 +160,14 @@ struct GoalsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 ForEach(goalsVM.activeLiftGoals) { goal in
-                    Text("Lift goal placeholder: \(goal.lift?.exerciseName ?? "?")")
-                        .foregroundColor(.white)
-                        .padding()
+                    LiftGoalCard(
+                        goal: goal,
+                        sessions: statsVM.sessions,
+                        onTap: { /* opens EditGoalSheet in Task 12 — leave noop for now */ },
+                        onDelete: {
+                            Task { await deleteGoal(goal) }
+                        }
+                    )
                 }
                 if let freq = goalsVM.activeFrequencyGoal {
                     Text("Frequency goal placeholder: \(freq.frequency?.workoutsPerWeek ?? 0)/wk")
@@ -166,6 +181,72 @@ struct GoalsView: View {
                 }
             }
             .padding()
+        }
+    }
+}
+
+struct LiftGoalCard: View {
+    let goal: Goal
+    let sessions: [WorkoutSession]
+    let onTap: () -> Void
+    let onDelete: () -> Void
+
+    private var progress: GoalsProgress {
+        GoalsMath.liftProgress(goal: goal, sessions: sessions)
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "dumbbell")
+                        .foregroundColor(.yellow)
+                    Text(goal.lift?.exerciseName ?? "Lift")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Spacer()
+                    deadlinePill
+                }
+                Text(progress.currentDisplay)
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.white)
+                ProgressView(value: progress.percent)
+                    .tint(.yellow)
+                Text("of \(progress.targetDisplay) e1RM")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.7))
+            }
+            .padding()
+            .background(Color.white.opacity(0.06))
+            .cornerRadius(14)
+        }
+        .buttonStyle(.plain)
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var deadlinePill: some View {
+        if let target = goal.targetDate {
+            let days = Calendar.current.dateComponents([.day], from: Date(), to: target).day ?? 0
+            if days < 0 {
+                Text("Overdue")
+                    .font(.caption2).bold()
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Color.red.opacity(0.7))
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+            } else {
+                Text("Due in \(days)d")
+                    .font(.caption2).bold()
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Color.white.opacity(0.2))
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+            }
         }
     }
 }
