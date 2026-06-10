@@ -185,13 +185,19 @@ struct GoalsView: View {
                     )
                 }
                 if let bw = goalsVM.activeBodyweightGoal {
-                    BodyweightGoalCard(
-                        goal: bw,
-                        entries: goalsVM.bodyweightEntries,
-                        onTapCard: { /* push BodyweightDetailView — Task 11 */ },
-                        onTapLog: { showingLogWeight = true },
-                        onDelete: { Task { await deleteGoal(bw) } }
-                    )
+                    NavigationLink {
+                        BodyweightDetailView(goal: bw)
+                            .environmentObject(goalsVM)
+                    } label: {
+                        BodyweightGoalCard(
+                            goal: bw,
+                            entries: goalsVM.bodyweightEntries,
+                            onTapCard: { /* unused — NavigationLink handles the tap */ },
+                            onTapLog: { showingLogWeight = true },
+                            onDelete: { Task { await deleteGoal(bw) } }
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding()
