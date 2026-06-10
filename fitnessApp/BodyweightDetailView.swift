@@ -107,8 +107,3 @@ struct BodyweightDetailView: View {
     }
 }
 
-// Temporary stub — replaced in Task 12.
-struct EditGoalSheet: View {
-    let goal: Goal
-    var body: some View { Text("Edit Goal placeholder").padding() }
-}

@@ -80,6 +80,7 @@ struct GoalsView: View {
     @EnvironmentObject private var statsVM: StatsViewModel
     @State private var showingAddSheet = false
     @State private var showingLogWeight = false
+    @State private var editingGoal: Goal?
 
     var body: some View {
         NavigationStack {
@@ -118,6 +119,11 @@ struct GoalsView: View {
                 LogBodyweightSheet()
                     .environmentObject(goalsVM)
                     .presentationDetents([.medium])
+            }
+            .sheet(item: $editingGoal) { goal in
+                EditGoalSheet(goal: goal)
+                    .environmentObject(goalsVM)
+                    .presentationDetents([.large])
             }
         }
     }
@@ -170,7 +176,7 @@ struct GoalsView: View {
                     LiftGoalCard(
                         goal: goal,
                         sessions: statsVM.sessions,
-                        onTap: { /* opens EditGoalSheet in Task 12 — leave noop for now */ },
+                        onTap: { editingGoal = goal },
                         onDelete: {
                             Task { await deleteGoal(goal) }
                         }
@@ -180,7 +186,7 @@ struct GoalsView: View {
                     FrequencyGoalCard(
                         goal: freq,
                         sessions: statsVM.sessions,
-                        onTap: { /* EditGoalSheet wired in Task 12 */ },
+                        onTap: { editingGoal = freq },
                         onDelete: { Task { await deleteGoal(freq) } }
                     )
                 }
