@@ -108,10 +108,9 @@ struct GoalsView: View {
                 await statsVM.refresh()
             }
             .sheet(isPresented: $showingAddSheet) {
-                Text("Add Goal sheet — added in Task 7")
-                    .foregroundColor(.white)
-                    .padding()
-                    .presentationDetents([.medium])
+                AddGoalSheet()
+                    .environmentObject(goalsVM)
+                    .presentationDetents([.large])
             }
         }
     }
