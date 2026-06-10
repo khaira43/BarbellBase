@@ -170,9 +170,12 @@ struct GoalsView: View {
                     )
                 }
                 if let freq = goalsVM.activeFrequencyGoal {
-                    Text("Frequency goal placeholder: \(freq.frequency?.workoutsPerWeek ?? 0)/wk")
-                        .foregroundColor(.white)
-                        .padding()
+                    FrequencyGoalCard(
+                        goal: freq,
+                        sessions: statsVM.sessions,
+                        onTap: { /* EditGoalSheet wired in Task 12 */ },
+                        onDelete: { Task { await deleteGoal(freq) } }
+                    )
                 }
                 if let bw = goalsVM.activeBodyweightGoal {
                     Text("Bodyweight goal placeholder: target \(Int(bw.bodyweight?.targetWeightLb ?? 0)) lb")
@@ -246,6 +249,49 @@ struct LiftGoalCard: View {
                     .background(Color.white.opacity(0.2))
                     .foregroundColor(.white)
                     .cornerRadius(8)
+            }
+        }
+    }
+}
+
+struct FrequencyGoalCard: View {
+    let goal: Goal
+    let sessions: [WorkoutSession]
+    let onTap: () -> Void
+    let onDelete: () -> Void
+
+    private var progress: GoalsProgress {
+        GoalsMath.frequencyProgress(goal: goal, sessions: sessions, now: Date())
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "calendar")
+                        .foregroundColor(.yellow)
+                    Text("Workouts this week")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Spacer()
+                }
+                Text(progress.currentDisplay)
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.white)
+                ProgressView(value: progress.percent)
+                    .tint(.yellow)
+                Text("Resets Monday")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.7))
+            }
+            .padding()
+            .background(Color.white.opacity(0.06))
+            .cornerRadius(14)
+        }
+        .buttonStyle(.plain)
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
             }
         }
     }
