@@ -103,8 +103,8 @@ struct ExerciseDetailView: View {
 
     private var tilesRow: some View {
         HStack(spacing: 12) {
-            tile(title: "Heaviest", value: "\(formatNumber(heaviestWeight))", subtitle: "lbs × \(heaviestReps)")
-            tile(title: "Est. 1RM", value: "\(formatNumber(bestE1RMOverall))", subtitle: "lbs")
+            tile(title: "Heaviest", value: "\(heaviestWeight.formattedGrouped)", subtitle: "lbs × \(heaviestReps)")
+            tile(title: "Est. 1RM", value: "\(bestE1RMOverall.formattedGrouped)", subtitle: "lbs")
             tile(title: "Sessions", value: "\(sessionsContainingExercise.count)", subtitle: nil)
         }
     }
@@ -237,7 +237,7 @@ struct ExerciseDetailView: View {
                 ? StatsMath.epleyOneRepMax(weight: weight, reps: set.actualReps)
                 : 0
             if weight > 0 {
-                return "Set \(index + 1) — \(set.actualReps) × \(formatNumber(weight)) lbs (e1RM \(formatNumber(e1rm)))"
+                return "Set \(index + 1) — \(set.actualReps) × \(weight.formattedGrouped) lbs (e1RM \(e1rm.formattedGrouped))"
             } else {
                 return "Set \(index + 1) — \(set.actualReps) reps"
             }
@@ -253,10 +253,4 @@ struct ExerciseDetailView: View {
         return formatter.string(from: date)
     }
 
-    private func formatNumber(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: NSNumber(value: value)) ?? "0"
-    }
 }

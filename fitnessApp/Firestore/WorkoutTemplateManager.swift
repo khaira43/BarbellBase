@@ -35,6 +35,8 @@ final class WorkoutTemplateManager {
 
     func deleteTemplate(userId: String, templateId: String) async throws {
         try await templateDocument(userId: userId, templateId: templateId).delete()
+        // Drop any weekday schedule assignments that pointed at this template.
+        try await ScheduleManager.shared.removeAssignments(userId: userId, templateId: templateId)
     }
 
     func getTemplate(userId: String, templateId: String) async throws -> WorkoutTemplate {

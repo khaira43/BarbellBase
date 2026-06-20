@@ -102,7 +102,7 @@ struct SessionSummaryView: View {
                     .foregroundColor(.white.opacity(0.5))
             } else {
                 ForEach(Array(completed.enumerated()), id: \.element.id) { index, set in
-                    Text("Set \(index + 1) — \(set.actualReps) × \(formatWeight(set.actualWeight))")
+                    Text("Set \(index + 1) — \(set.actualReps) × \(set.actualWeight.formattedWeight)")
                         .font(.caption.monospacedDigit())
                         .foregroundColor(.white.opacity(0.85))
                 }
@@ -150,14 +150,6 @@ struct SessionSummaryView: View {
         let total = session.exercises.flatMap(\.sets)
             .filter(\.isCompleted)
             .reduce(0.0) { $0 + Double($1.actualReps) * ($1.actualWeight ?? 0) }
-        return formatWeight(total)
-    }
-
-    private func formatWeight(_ value: Double?) -> String {
-        guard let value else { return "—" }
-        if value.truncatingRemainder(dividingBy: 1) == 0 {
-            return String(format: "%.0f", value)
-        }
-        return String(format: "%.1f", value)
+        return total.formattedWeight
     }
 }

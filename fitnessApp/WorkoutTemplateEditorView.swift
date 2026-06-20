@@ -216,16 +216,9 @@ struct WorkoutTemplateEditorView: View {
     private func targetSummary(_ exercise: PlannedExercise) -> String {
         var pieces = ["\(exercise.targetSets) × \(exercise.targetReps)"]
         if let weight = exercise.targetWeight {
-            pieces.append("\(formatWeight(weight)) lbs")
+            pieces.append("\(weight.formattedWeight) lbs")
         }
         return pieces.joined(separator: " · ")
-    }
-
-    private func formatWeight(_ value: Double) -> String {
-        if value.truncatingRemainder(dividingBy: 1) == 0 {
-            return String(format: "%.0f", value)
-        }
-        return String(format: "%.1f", value)
     }
 
     private var addExerciseButton: some View {

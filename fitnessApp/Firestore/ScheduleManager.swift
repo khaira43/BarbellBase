@@ -39,4 +39,17 @@ final class ScheduleManager {
         }
         try await setSchedule(schedule)
     }
+
+    /// Clears any weekday assignments pointing at the given template. Called when a
+    /// template is deleted so the schedule doesn't keep dangling references.
+    /// No-ops (and avoids a write) when nothing references the template.
+    func removeAssignments(userId: String, templateId: String) async throws {
+        var schedule = try await getSchedule(userId: userId)
+        let staleDays = schedule.assignments.filter { $0.value == templateId }.map(\.key)
+        guard !staleDays.isEmpty else { return }
+        for day in staleDays {
+            schedule.assignments.removeValue(forKey: day)
+        }
+        try await setSchedule(schedule)
+    }
 }

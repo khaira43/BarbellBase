@@ -298,7 +298,7 @@ struct ActiveSessionView: View {
 
     private func weightField(exerciseId: String, set: LoggedSet) -> some View {
         let binding = Binding<String>(
-            get: { set.actualWeight.map { formatWeight($0) } ?? "" },
+            get: { set.actualWeight.map { $0.formattedWeight } ?? "" },
             set: { viewModel.updateWeight(exerciseId: exerciseId, setId: set.id, weight: Double($0)) }
         )
         return HStack(spacing: 4) {
@@ -368,12 +368,5 @@ struct ActiveSessionView: View {
         let m = seconds / 60
         let s = seconds % 60
         return String(format: "%d:%02d", m, s)
-    }
-
-    private func formatWeight(_ value: Double) -> String {
-        if value.truncatingRemainder(dividingBy: 1) == 0 {
-            return String(format: "%.0f", value)
-        }
-        return String(format: "%.1f", value)
     }
 }
