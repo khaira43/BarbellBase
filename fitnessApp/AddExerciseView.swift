@@ -60,9 +60,14 @@ struct AddExerciseView: View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.white.opacity(0.6))
-            TextField("Search exercises", text: $searchText)
-                .foregroundColor(.white)
-                .autocapitalization(.none)
+            TextField(
+                "",
+                text: $searchText,
+                prompt: Text("Search exercises").foregroundColor(.white.opacity(0.5))
+            )
+            .foregroundColor(.white)
+            .tint(.yellow)
+            .autocapitalization(.none)
         }
         .padding()
         .background(Color(hex: "#06152a"))
@@ -92,7 +97,11 @@ struct AddExerciseView: View {
                 Text("Target weight (lbs)")
                     .foregroundColor(.white)
                 Spacer()
-                TextField("optional", text: $targetWeightText)
+                TextField(
+                    "",
+                    text: $targetWeightText,
+                    prompt: Text("optional").foregroundColor(.white.opacity(0.5))
+                )
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 100)
@@ -130,22 +139,41 @@ struct AddExerciseView: View {
     }
 
     private func stepperField(label: String, value: Binding<Int>, range: ClosedRange<Int>) -> some View {
-        HStack {
+        VStack(alignment: .leading, spacing: 8) {
             Text(label)
-                .foregroundColor(.white)
-            Spacer()
-            Stepper(value: value, in: range) {
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.8))
+
+            HStack(spacing: 0) {
+                Button {
+                    if value.wrappedValue > range.lowerBound { value.wrappedValue -= 1 }
+                } label: {
+                    Image(systemName: "minus")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                }
+                .disabled(value.wrappedValue <= range.lowerBound)
+
                 Text("\(value.wrappedValue)")
+                    .font(.headline)
                     .foregroundColor(.yellow)
                     .monospacedDigit()
+                    .frame(minWidth: 28)
+
+                Button {
+                    if value.wrappedValue < range.upperBound { value.wrappedValue += 1 }
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                }
+                .disabled(value.wrappedValue >= range.upperBound)
             }
-            .labelsHidden()
-            Text("\(value.wrappedValue)")
-                .foregroundColor(.yellow)
-                .monospacedDigit()
-                .frame(width: 32, alignment: .trailing)
+            .buttonStyle(.borderless)
+            .foregroundColor(.white)
         }
         .padding(8)
+        .frame(maxWidth: .infinity)
         .background(Color(hex: "#06152a"))
         .cornerRadius(8)
     }

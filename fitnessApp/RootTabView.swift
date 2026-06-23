@@ -33,8 +33,8 @@ struct RootTabView: View {
 
             NavigationStack {
                 ProfileView(showSignInView: $showSignInView)
-                    .environmentObject(friendsViewModel)
             }
+            .environmentObject(friendsViewModel)
             .tabItem { Label("Profile", systemImage: "person") }
 
             GoalsView()

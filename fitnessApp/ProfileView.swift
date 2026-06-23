@@ -31,38 +31,52 @@ struct ProfileView: View {
     @Binding var showSignInView: Bool
 
     var body: some View {
-        List {
-            if let user = viewModel.user {
-                Section("Account") {
-                    if let email = user.email {
-                        LabeledContent("Email", value: email)
-                    }
-                    LabeledContent("User ID", value: String(user.userId.prefix(8)) + "…")
-                    if let isAnonymous = user.isAnonymous {
-                        LabeledContent("Anonymous", value: isAnonymous ? "Yes" : "No")
-                    }
-                }
+        ZStack {
+            Color(hex: "#081f3a").ignoresSafeArea()
 
-                Section("Membership") {
-                    Button {
-                        viewModel.togglePremiumStatus()
-                    } label: {
-                        HStack {
-                            Text("Premium")
-                            Spacer()
-                            Text((user.isPremium ?? false) ? "Active" : "Inactive")
-                                .foregroundColor(.secondary)
+            if let user = viewModel.user {
+                List {
+                    Section {
+                        if let email = user.email {
+                            infoRow("Email", value: email)
                         }
+                        infoRow("User ID", value: String(user.userId.prefix(8)) + "…")
+                        if let isAnonymous = user.isAnonymous {
+                            infoRow("Anonymous", value: isAnonymous ? "Yes" : "No")
+                        }
+                    } header: {
+                        Text("Account").foregroundColor(.white.opacity(0.6))
                     }
+                    .listRowBackground(Color(hex: "#0c2548"))
+
+                    Section {
+                        Button {
+                            viewModel.togglePremiumStatus()
+                        } label: {
+                            HStack {
+                                Text("Premium").foregroundColor(.yellow)
+                                Spacer()
+                                Text((user.isPremium ?? false) ? "Active" : "Inactive")
+                                    .foregroundColor(.white.opacity(0.6))
+                            }
+                        }
+                    } header: {
+                        Text("Membership").foregroundColor(.white.opacity(0.6))
+                    }
+                    .listRowBackground(Color(hex: "#0c2548"))
                 }
+                .scrollContentBackground(.hidden)
             } else {
-                ProgressView()
+                ProgressView().tint(.white)
             }
         }
         .task {
             try? await viewModel.loadCurrentUser()
         }
         .navigationTitle("Profile")
+        .toolbarBackground(Color(hex: "#081f3a"), for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 NavigationLink {
@@ -70,8 +84,17 @@ struct ProfileView: View {
                 } label: {
                     Image(systemName: "gear")
                         .font(.headline)
+                        .foregroundColor(.yellow)
                 }
             }
+        }
+    }
+
+    private func infoRow(_ label: String, value: String) -> some View {
+        HStack {
+            Text(label).foregroundColor(.white)
+            Spacer()
+            Text(value).foregroundColor(.white.opacity(0.6))
         }
     }
 }

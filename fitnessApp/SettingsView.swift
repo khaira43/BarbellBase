@@ -29,6 +29,10 @@ struct SettingsView: View {
     @State private var errorMessage: String?
     @State private var showingHandleSheet = false
     @State private var sharesFullDetails: Bool = true
+    #if DEBUG
+    @State private var seedStatus: String?
+    @State private var isSeeding = false
+    #endif
 
     var body: some View {
         List {
@@ -93,6 +97,30 @@ struct SettingsView: View {
                     Text("Sign Out")
                 }
             }
+
+            #if DEBUG
+            Section("Demo Data") {
+                Button {
+                    runSeed { try await DebugSeeder.seed(userId: $0) }
+                } label: {
+                    Label("Seed demo workouts", systemImage: "wand.and.stars")
+                }
+                .disabled(isSeeding)
+
+                Button(role: .destructive) {
+                    runSeed { try await DebugSeeder.clear(userId: $0) }
+                } label: {
+                    Label("Clear all sessions", systemImage: "trash")
+                }
+                .disabled(isSeeding)
+
+                if let seedStatus {
+                    Text(seedStatus)
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+            }
+            #endif
         }
         .navigationTitle("Settings")
         .task {
@@ -103,6 +131,26 @@ struct SettingsView: View {
                 .environmentObject(friendsVM)
         }
     }
+
+    #if DEBUG
+    private func runSeed(_ action: @escaping (String) async throws -> Int) {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            seedStatus = "Not signed in."
+            return
+        }
+        isSeeding = true
+        seedStatus = "Working…"
+        Task {
+            do {
+                let count = try await action(uid)
+                seedStatus = "Done — \(count) session(s)."
+            } catch {
+                seedStatus = "Failed: \(error.localizedDescription)"
+            }
+            isSeeding = false
+        }
+    }
+    #endif
 
     private func updateSharesFullDetails(_ value: Bool) async {
         guard let uid = Auth.auth().currentUser?.uid else { return }

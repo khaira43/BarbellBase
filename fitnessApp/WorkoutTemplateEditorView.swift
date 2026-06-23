@@ -40,7 +40,6 @@ final class WorkoutTemplateEditorViewModel: ObservableObject {
 
     var canSave: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !exercises.isEmpty
             && !isSaving
     }
 
@@ -60,10 +59,6 @@ final class WorkoutTemplateEditorViewModel: ObservableObject {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             errorMessage = "Give your workout a name."
-            return false
-        }
-        guard !exercises.isEmpty else {
-            errorMessage = "Add at least one exercise."
             return false
         }
 
@@ -177,12 +172,17 @@ struct WorkoutTemplateEditorView: View {
     }
 
     private var nameField: some View {
-        TextField("Workout name", text: $viewModel.name)
-            .padding()
-            .background(Color(hex: "#06152a"))
-            .foregroundColor(.white)
-            .cornerRadius(10)
-            .padding(.horizontal)
+        TextField(
+            "",
+            text: $viewModel.name,
+            prompt: Text("Workout name").foregroundColor(.white.opacity(0.5))
+        )
+        .padding()
+        .background(Color(hex: "#06152a"))
+        .foregroundColor(.white)
+        .tint(.yellow)
+        .cornerRadius(10)
+        .padding(.horizontal)
     }
 
     private var exerciseList: some View {
