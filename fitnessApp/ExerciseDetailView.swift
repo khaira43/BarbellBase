@@ -143,6 +143,7 @@ struct ExerciseDetailView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 180)
+                .colorScheme(.dark)
             }
             let points = pointsInWindow
             if points.isEmpty {

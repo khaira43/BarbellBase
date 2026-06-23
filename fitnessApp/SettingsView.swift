@@ -35,94 +35,132 @@ struct SettingsView: View {
     #endif
 
     var body: some View {
-        List {
-            Section("Profile") {
-                Button {
-                    showingHandleSheet = true
-                } label: {
-                    HStack {
-                        Text("Handle")
-                        Spacer()
-                        if let handle = friendsVM.currentUser?.handle {
-                            Text("@\(handle)").foregroundColor(.secondary)
-                        } else {
-                            Text("Set").foregroundColor(.yellow)
+        ZStack {
+            Color(hex: "#081f3a").ignoresSafeArea()
+
+            List {
+                Section {
+                    Button {
+                        showingHandleSheet = true
+                    } label: {
+                        HStack {
+                            Text("Handle").foregroundColor(.yellow)
+                            Spacer()
+                            if let handle = friendsVM.currentUser?.handle {
+                                Text("@\(handle)").foregroundColor(.white.opacity(0.6))
+                            } else {
+                                Text("Set").foregroundColor(.yellow)
+                            }
                         }
                     }
+
+                    Toggle("Share full workout details with friends", isOn: $sharesFullDetails)
+                        .foregroundColor(.white)
+                        .tint(.yellow)
+                        .onChange(of: sharesFullDetails) { _, newValue in
+                            Task { await updateSharesFullDetails(newValue) }
+                        }
+                } header: {
+                    Text("Profile").foregroundColor(.white.opacity(0.6))
                 }
+                .listRowBackground(Color(hex: "#0c2548"))
 
-                Toggle("Share full workout details with friends", isOn: $sharesFullDetails)
-                    .onChange(of: sharesFullDetails) { _, newValue in
-                        Task { await updateSharesFullDetails(newValue) }
+                Section {
+                    Button {
+                        Task {
+                            do {
+                                try await viewModel.resetPassword()
+                                resetSent = true
+                                errorMessage = nil
+                            } catch {
+                                errorMessage = "Couldn't send reset email."
+                            }
+                        }
+                    } label: {
+                        Text("Reset Password").foregroundColor(.yellow)
                     }
-            }
 
-            Section("Account") {
-                Button {
-                    Task {
+                    if resetSent {
+                        Text("Reset email sent.")
+                            .font(.footnote)
+                            .foregroundColor(.green)
+                    }
+
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                    }
+                } header: {
+                    Text("Account").foregroundColor(.white.opacity(0.6))
+                }
+                .listRowBackground(Color(hex: "#0c2548"))
+
+                Section {
+                    Button(role: .destructive) {
                         do {
-                            try await viewModel.resetPassword()
-                            resetSent = true
-                            errorMessage = nil
+                            try viewModel.signOut()
+                            showSignInView = true
                         } catch {
-                            errorMessage = "Couldn't send reset email."
+                            errorMessage = "Couldn't sign out."
                         }
+                    } label: {
+                        Text("Sign Out").foregroundColor(.red)
                     }
-                } label: {
-                    Text("Reset Password")
                 }
+                .listRowBackground(Color(hex: "#0c2548"))
 
-                if resetSent {
-                    Text("Reset email sent.")
-                        .font(.footnote)
-                        .foregroundColor(.green)
-                }
-
-                if let errorMessage {
-                    Text(errorMessage)
-                        .font(.footnote)
-                        .foregroundColor(.red)
-                }
-            }
-
-            Section {
-                Button(role: .destructive) {
-                    do {
-                        try viewModel.signOut()
-                        showSignInView = true
-                    } catch {
-                        errorMessage = "Couldn't sign out."
+                #if DEBUG
+                Section {
+                    Button {
+                        runSeed { try await DebugSeeder.seed(userId: $0) }
+                    } label: {
+                        Label("Seed demo workouts", systemImage: "wand.and.stars")
+                            .foregroundColor(.yellow)
                     }
-                } label: {
-                    Text("Sign Out")
+                    .disabled(isSeeding)
+
+                    Button(role: .destructive) {
+                        runSeed { try await DebugSeeder.clear(userId: $0) }
+                    } label: {
+                        Label("Clear all sessions", systemImage: "trash")
+                            .foregroundColor(.red)
+                    }
+                    .disabled(isSeeding)
+
+                    Button {
+                        runSeed { try await DebugSeeder.seedRoutines(userId: $0) }
+                    } label: {
+                        Label("Seed demo routines", systemImage: "calendar")
+                            .foregroundColor(.yellow)
+                    }
+                    .disabled(isSeeding)
+
+                    Button(role: .destructive) {
+                        runSeed { try await DebugSeeder.clearRoutines(userId: $0) }
+                    } label: {
+                        Label("Clear all routines", systemImage: "trash")
+                            .foregroundColor(.red)
+                    }
+                    .disabled(isSeeding)
+
+                    if let seedStatus {
+                        Text(seedStatus)
+                            .font(.footnote)
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+                } header: {
+                    Text("Demo Data").foregroundColor(.white.opacity(0.6))
                 }
+                .listRowBackground(Color(hex: "#0c2548"))
+                #endif
             }
-
-            #if DEBUG
-            Section("Demo Data") {
-                Button {
-                    runSeed { try await DebugSeeder.seed(userId: $0) }
-                } label: {
-                    Label("Seed demo workouts", systemImage: "wand.and.stars")
-                }
-                .disabled(isSeeding)
-
-                Button(role: .destructive) {
-                    runSeed { try await DebugSeeder.clear(userId: $0) }
-                } label: {
-                    Label("Clear all sessions", systemImage: "trash")
-                }
-                .disabled(isSeeding)
-
-                if let seedStatus {
-                    Text(seedStatus)
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                }
-            }
-            #endif
+            .scrollContentBackground(.hidden)
         }
         .navigationTitle("Settings")
+        .toolbarBackground(Color(hex: "#081f3a"), for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .task {
             sharesFullDetails = friendsVM.currentUser?.sharesFullDetails ?? true
         }

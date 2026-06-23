@@ -155,46 +155,61 @@ private struct AssignWorkoutSheet: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                if !templates.isEmpty {
-                    Section("Assign a Workout") {
-                        ForEach(templates) { template in
-                            Button {
-                                onSelect(template.id)
-                                dismiss()
-                            } label: {
-                                HStack {
-                                    Text(template.name)
-                                    Spacer()
-                                    if template.id == currentTemplateId {
-                                        Image(systemName: "checkmark")
-                                            .foregroundColor(.accentColor)
+            ZStack {
+                Color(hex: "#081f3a").ignoresSafeArea()
+                List {
+                    if !templates.isEmpty {
+                        Section {
+                            ForEach(templates) { template in
+                                Button {
+                                    onSelect(template.id)
+                                    dismiss()
+                                } label: {
+                                    HStack {
+                                        Text(template.name)
+                                            .foregroundColor(.white)
+                                        Spacer()
+                                        if template.id == currentTemplateId {
+                                            Image(systemName: "checkmark")
+                                                .foregroundColor(.yellow)
+                                        }
                                     }
                                 }
                             }
+                        } header: {
+                            Text("Assign a Workout").foregroundColor(.white.opacity(0.6))
+                        }
+                        .listRowBackground(Color(hex: "#0c2548"))
+                    } else {
+                        Section {
+                            Text("No workouts yet. Create one from the Workout tab first.")
+                                .foregroundColor(.white.opacity(0.6))
+                        }
+                        .listRowBackground(Color(hex: "#0c2548"))
+                    }
+
+                    Section {
+                        Button(role: .destructive) {
+                            onSelect(nil)
+                            dismiss()
+                        } label: {
+                            Text(currentTemplateId == nil ? "Leave Unassigned" : "Clear Assignment")
+                                .foregroundColor(.red)
                         }
                     }
-                } else {
-                    Section {
-                        Text("No workouts yet. Create one from the Workout tab first.")
-                            .foregroundColor(.secondary)
-                    }
+                    .listRowBackground(Color(hex: "#0c2548"))
                 }
-
-                Section {
-                    Button(role: .destructive) {
-                        onSelect(nil)
-                        dismiss()
-                    } label: {
-                        Text(currentTemplateId == nil ? "Leave Unassigned" : "Clear Assignment")
-                    }
-                }
+                .scrollContentBackground(.hidden)
             }
             .navigationTitle(day.displayName)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color(hex: "#081f3a"), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") { dismiss() }
+                        .foregroundColor(.yellow)
                 }
             }
         }

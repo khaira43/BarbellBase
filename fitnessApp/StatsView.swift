@@ -97,7 +97,8 @@ struct StatsView: View {
                 Color(hex: "#081f3a").ignoresSafeArea()
                 content
             }
-            .navigationTitle("Stats")
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color(hex: "#081f3a"), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -120,6 +121,11 @@ struct StatsView: View {
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    Text("Stats")
+                        .font(.largeTitle.bold())
+                        .foregroundColor(.yellow)
+                        .padding(.horizontal)
+                        .padding(.top, 4)
                     if let errorMessage = vm.errorMessage {
                         errorBanner(errorMessage)
                     }
@@ -182,6 +188,17 @@ struct StatsView: View {
         }
     }
 
+    // Subsample x-axis labels so dense windows (12w / All) stay legible —
+    // aim for at most ~6 labels, always including the most recent bin.
+    private var visibleXLabels: [String] {
+        let series = vm.volumeSeries
+        guard series.count > 6 else { return series.map(\.label) }
+        let stride = Int(ceil(Double(series.count) / 6.0))
+        return series.enumerated().compactMap { index, bin in
+            (series.count - 1 - index) % stride == 0 ? bin.label : nil
+        }
+    }
+
     private var volumeCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -196,6 +213,7 @@ struct StatsView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 180)
+                .colorScheme(.dark)
             }
 
             if vm.volumeSeries.allSatisfy({ $0.volume == 0 }) {
@@ -219,7 +237,7 @@ struct StatsView: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks { _ in
+                    AxisMarks(values: visibleXLabels) { _ in
                         AxisValueLabel().foregroundStyle(Color.white.opacity(0.6))
                     }
                 }

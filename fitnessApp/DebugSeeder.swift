@@ -95,6 +95,58 @@ enum DebugSeeder {
         return written
     }
 
+    // Which weekday each seeded template lands on in the weekly schedule.
+    private static let scheduleDay: [String: Weekday] = [
+        "Push Day": .monday,
+        "Pull Day": .wednesday,
+        "Leg Day": .friday,
+        "Arm Day": .saturday,
+    ]
+
+    /// Creates a workout template per day in the split and wires them into the
+    /// weekly schedule. Returns the number of templates written.
+    @discardableResult
+    static func seedRoutines(userId: String) async throws -> Int {
+        var assignments: [Weekday: String] = [:]
+
+        for day in days {
+            let exercises = day.exercises.map { ex in
+                PlannedExercise(
+                    exerciseId: ex.id,
+                    exerciseName: ex.name,
+                    targetSets: ex.sets,
+                    targetReps: ex.reps,
+                    targetWeight: ex.baseWeight
+                )
+            }
+            let template = WorkoutTemplate(userId: userId, name: day.templateName, exercises: exercises)
+            try await WorkoutTemplateManager.shared.createTemplate(template)
+            if let weekday = scheduleDay[day.templateName] {
+                assignments[weekday] = template.id
+            }
+        }
+
+        try await ScheduleManager.shared.setSchedule(Schedule(userId: userId, assignments: assignments))
+        return days.count
+    }
+
+    /// Deletes every workout template and clears the weekly schedule. Returns
+    /// the number of templates removed.
+    @discardableResult
+    static func clearRoutines(userId: String) async throws -> Int {
+        let snapshot = try await Firestore.firestore()
+            .collection("users")
+            .document(userId)
+            .collection("workoutTemplates")
+            .getDocuments()
+
+        for document in snapshot.documents {
+            try await document.reference.delete()
+        }
+        try await ScheduleManager.shared.setSchedule(Schedule(userId: userId, assignments: [:]))
+        return snapshot.documents.count
+    }
+
     /// Deletes every session document for the user. Returns the count removed.
     @discardableResult
     static func clear(userId: String) async throws -> Int {
